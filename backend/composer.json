@@ -1,0 +1,25 @@
+{
+    "name": "eventilize/backend",
+    "description": "Eventilize PHP Slim REST API Backend",
+    "type": "project",
+
+    "autoload": {
+        "psr-4": {
+            "Eventilize\\": "src/"
+        }
+    },
+
+    "authors": [
+        {
+            "name": "Chuan Kai",
+            "email": "chewchuankai@graduate.utm.my"
+        }
+    ],
+
+    "require": {
+        "slim/slim": "^4.15",
+        "slim/psr7": "^1.8",
+        "vlucas/phpdotenv": "^5.6",
+        "firebase/php-jwt": "^7.0"
+    }
+}
