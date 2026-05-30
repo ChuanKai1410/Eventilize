@@ -1,14 +1,17 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '../composables/useAuth.js'
 import { useNotifications } from '../composables/useNotifications.js'
 
 const { user, isAuthenticated, logout, getDashboardRoute } = useAuth()
 const { unreadCount } = useNotifications()
 const router = useRouter()
+const route = useRoute()
 
 const searchQuery = ref('')
+
+const isLandingPage = computed(() => route.path === '/')
 
 const roleLabel = computed(() => {
   if (!user.value) return ''
@@ -65,8 +68,13 @@ function handleSearch() {
         />
       </div>
 
-      <nav class="navbar-links">
-        <router-link v-if="!isAuthenticated" to="/events" class="nav-link">Browse Events</router-link>
+      <nav
+        class="navbar-links"
+        :class="{ 'navbar-links--public': !isAuthenticated && isLandingPage }"
+      >
+        <template v-if="!isAuthenticated && !isLandingPage">
+          <router-link to="/events" class="nav-link">Browse Events</router-link>
+        </template>
 
         <template v-if="!isAuthenticated">
           <router-link to="/login" class="btn btn-ghost btn-sm">Login</router-link>
@@ -180,6 +188,10 @@ function handleSearch() {
   align-items: center;
   gap: 0.875rem;
   flex-shrink: 0;
+}
+
+.navbar-links--public {
+  margin-left: auto;
 }
 
 .nav-link {

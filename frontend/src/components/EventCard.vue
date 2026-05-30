@@ -6,6 +6,7 @@ import StatusBadge from './StatusBadge.vue'
 const props = defineProps({
   event: { type: Object, required: true },
   showStatus: { type: Boolean, default: false },
+  previewOnly: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['bookmark', 'view-details'])
@@ -49,17 +50,19 @@ const thumbnailStyle = computed(() => {
 })
 
 function goToDetails() {
+  if (props.previewOnly) return
   emit('view-details', props.event.id)
   router.push(`/events/${props.event.id}`)
 }
 
 function toggleBookmark() {
+  if (props.previewOnly) return
   emit('bookmark', props.event.id)
 }
 </script>
 
 <template>
-  <article class="event-card card">
+  <article class="event-card card" :class="{ 'preview-only': previewOnly }">
     <div class="event-thumbnail" :style="thumbnailStyle">
       <span class="category-badge" :class="categoryClass">{{ event.category }}</span>
       <div class="thumbnail-icon" aria-hidden="true">
@@ -105,14 +108,22 @@ function toggleBookmark() {
           type="button"
           class="bookmark-btn"
           :class="{ active: event.isBookmarked }"
-          :aria-label="event.isBookmarked ? 'Remove bookmark' : 'Bookmark event'"
+          :disabled="previewOnly"
+          :aria-label="previewOnly ? 'Login to bookmark' : event.isBookmarked ? 'Remove bookmark' : 'Bookmark event'"
           @click="toggleBookmark"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" :fill="event.isBookmarked ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
             <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <button type="button" class="btn btn-primary btn-sm" @click="goToDetails">View Details</button>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          :disabled="previewOnly"
+          @click="goToDetails"
+        >
+          View Details
+        </button>
       </div>
     </div>
   </article>
@@ -245,5 +256,16 @@ function toggleBookmark() {
   color: var(--color-primary);
   border-color: var(--color-primary);
   background: var(--color-maroon-tint);
+}
+
+.bookmark-btn:disabled,
+.event-actions .btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.preview-only:hover {
+  transform: none;
 }
 </style>
