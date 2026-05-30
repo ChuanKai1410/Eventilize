@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar.vue'
 import EventCard from '../components/EventCard.vue'
 import { useEventStore } from '../composables/useEventStore.js'
 
-const { approvedEvents, toggleBookmark } = useEventStore()
+const { approvedEvents } = useEventStore()
 
 const upcomingPreview = computed(() =>
   [...approvedEvents.value]
@@ -12,8 +12,11 @@ const upcomingPreview = computed(() =>
     .slice(0, 3)
 )
 
-function onBookmark(id) {
-  toggleBookmark(id)
+function scrollToUpcomingEvents() {
+  document.getElementById('upcoming-events')?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
 }
 </script>
 
@@ -30,7 +33,9 @@ function onBookmark(id) {
           Find workshops, career fairs, cultural nights, and more — all in one place.
         </p>
         <div class="hero-actions">
-          <router-link to="/events" class="btn btn-primary btn-lg">Browse Events</router-link>
+          <button type="button" class="btn btn-primary btn-lg" @click="scrollToUpcomingEvents">
+            Browse Events
+          </button>
           <router-link to="/login" class="btn btn-outline btn-lg">Login</router-link>
         </div>
       </div>
@@ -86,18 +91,19 @@ function onBookmark(id) {
       </div>
     </section>
 
-    <section class="preview section page-container">
+    <section id="upcoming-events" class="preview section page-container">
       <h2>Upcoming Events</h2>
+      <p class="preview-hint">Login to bookmark or view full details.</p>
       <div class="events-grid">
         <EventCard
           v-for="event in upcomingPreview"
           :key="event.id"
           :event="event"
-          @bookmark="onBookmark"
+          preview-only
         />
       </div>
       <div class="preview-cta">
-        <router-link to="/events" class="btn btn-primary">View All Events</router-link>
+        <router-link to="/login" class="btn btn-primary">View All Events</router-link>
       </div>
     </section>
 
@@ -165,10 +171,17 @@ function onBookmark(id) {
 .features h2,
 .preview h2 {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 0.75rem;
   font-size: 1.375rem;
   font-weight: 700;
   color: var(--color-text);
+}
+
+.preview-hint {
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-bottom: 1.5rem;
 }
 
 .features-grid {
@@ -227,5 +240,9 @@ function onBookmark(id) {
   font-size: 0.8125rem;
   opacity: 0.65;
   margin-top: 0.25rem;
+}
+
+#upcoming-events {
+  scroll-margin-top: calc(var(--navbar-height) + 1rem);
 }
 </style>
