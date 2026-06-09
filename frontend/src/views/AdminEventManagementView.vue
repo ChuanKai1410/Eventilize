@@ -14,25 +14,57 @@ const showDeleteModal = ref(false)
 const eventToDelete = ref(null)
 const successMessage = ref('')
 
+const showRejectModal = ref(false)
+const eventToReject = ref(null)
+const rejectReason = ref('')
+const rejectReasonError = ref('')
+
 const organizers = computed(() => [...new Set(events.value.map((e) => e.organizer))].sort())
 
 const filteredEvents = computed(() => {
   let list = [...events.value]
+
   if (statusFilter.value) list = list.filter((e) => e.status === statusFilter.value)
   if (categoryFilter.value) list = list.filter((e) => e.category === categoryFilter.value)
   if (organizerFilter.value) list = list.filter((e) => e.organizer === organizerFilter.value)
+
   return list.sort((a, b) => b.eventDate.localeCompare(a.eventDate))
 })
 
 function approve(event) {
   updateEventStatus(event.id, 'Approved')
+  event.rejectReason = ''
   successMessage.value = `"${event.title}" approved.`
   clearSuccess()
 }
 
-function reject(event) {
-  updateEventStatus(event.id, 'Rejected')
-  successMessage.value = `"${event.title}" rejected.`
+function openRejectModal(event) {
+  eventToReject.value = event
+  rejectReason.value = ''
+  rejectReasonError.value = ''
+  showRejectModal.value = true
+}
+
+function closeRejectModal() {
+  showRejectModal.value = false
+  eventToReject.value = null
+  rejectReason.value = ''
+  rejectReasonError.value = ''
+}
+
+function confirmReject() {
+  if (!rejectReason.value.trim()) {
+    rejectReasonError.value = 'Reject reason is required.'
+    return
+  }
+
+  if (!eventToReject.value) return
+
+  updateEventStatus(eventToReject.value.id, 'Rejected')
+  eventToReject.value.rejectReason = rejectReason.value.trim()
+
+  successMessage.value = `"${eventToReject.value.title}" rejected.`
+  closeRejectModal()
   clearSuccess()
 }
 
@@ -41,14 +73,19 @@ function confirmDelete(event) {
   showDeleteModal.value = true
 }
 
+function closeDeleteModal() {
+  showDeleteModal.value = false
+  eventToDelete.value = null
+}
+
 function handleDelete() {
   if (eventToDelete.value) {
     deleteEvent(eventToDelete.value.id)
     successMessage.value = 'Event deleted.'
     clearSuccess()
   }
-  showDeleteModal.value = false
-  eventToDelete.value = null
+
+  closeDeleteModal()
 }
 
 function clearSuccess() {
@@ -66,7 +103,9 @@ function clearSuccess() {
         <p>View and manage all platform events.</p>
       </div>
 
-      <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
+      <div v-if="successMessage" class="alert alert-success">
+        {{ successMessage }}
+      </div>
 
       <div class="filters-row">
         <select v-model="statusFilter" class="form-select">
@@ -76,13 +115,19 @@ function clearSuccess() {
           <option value="Rejected">Rejected</option>
           <option value="Draft">Draft</option>
         </select>
+
         <select v-model="categoryFilter" class="form-select">
           <option value="">All categories</option>
-          <option v-for="cat in eventCategories" :key="cat" :value="cat">{{ cat }}</option>
+          <option v-for="cat in eventCategories" :key="cat" :value="cat">
+            {{ cat }}
+          </option>
         </select>
+
         <select v-model="organizerFilter" class="form-select">
           <option value="">All organizers</option>
-          <option v-for="org in organizers" :key="org" :value="org">{{ org }}</option>
+          <option v-for="org in organizers" :key="org" :value="org">
+            {{ org }}
+          </option>
         </select>
       </div>
 
@@ -100,35 +145,50 @@ function clearSuccess() {
               <th>Actions</th>
             </tr>
           </thead>
+
           <tbody>
             <tr v-for="event in filteredEvents" :key="event.id">
               <td>{{ event.title }}</td>
               <td>{{ event.organizer }}</td>
               <td>{{ event.category }}</td>
               <td>{{ event.eventDate }}</td>
-              <td><StatusBadge :status="event.status" /></td>
+              <td>
+                <StatusBadge :status="event.status" />
+              </td>
               <td>{{ event.viewsCount }}</td>
               <td>{{ event.bookmarksCount }}</td>
               <td>
                 <div class="table-actions">
-                  <router-link :to="`/events/${event.id}`" class="btn btn-ghost btn-sm">View</router-link>
+                  <router-link
+                    :to="{ path: `/events/${event.id}`, query: { from: 'admin-events' } }"
+                    class="btn btn-ghost btn-sm"
+                  >
+                    View
+                  </router-link>
+
                   <button
-                    v-if="event.status !== 'Approved'"
+                    v-if="event.status === 'Pending'"
                     type="button"
                     class="btn btn-accent btn-sm"
                     @click="approve(event)"
                   >
                     Approve
                   </button>
+
                   <button
-                    v-if="event.status !== 'Rejected'"
+                    v-if="event.status === 'Pending'"
                     type="button"
                     class="btn btn-ghost btn-sm"
-                    @click="reject(event)"
+                    @click="openRejectModal(event)"
                   >
                     Reject
                   </button>
-                  <button type="button" class="btn btn-danger btn-sm" @click="confirmDelete(event)">
+
+                  <button
+                    type="button"
+                    class="btn btn-danger btn-sm"
+                    @click="confirmDelete(event)"
+                  >
                     Delete
                   </button>
                 </div>
@@ -138,13 +198,53 @@ function clearSuccess() {
         </table>
       </div>
 
-      <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+      <div v-if="showRejectModal" class="modal-overlay" @click.self="closeRejectModal">
+        <div class="modal">
+          <h3>Reject Event</h3>
+
+          <p>
+            Please provide a reason before rejecting "{{ eventToReject?.title }}".
+          </p>
+
+          <textarea
+            v-model="rejectReason"
+            class="form-input reject-textarea"
+            rows="4"
+            placeholder="Enter reject reason"
+          />
+
+          <p v-if="rejectReasonError" class="form-error">
+            {{ rejectReasonError }}
+          </p>
+
+          <div class="modal-actions">
+            <button type="button" class="btn btn-ghost" @click="closeRejectModal">
+              Cancel
+            </button>
+
+            <button type="button" class="btn btn-danger" @click="confirmReject">
+              Confirm Reject
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
         <div class="modal">
           <h3>Delete Event?</h3>
-          <p>Permanently delete "{{ eventToDelete?.title }}"?</p>
+
+          <p>
+            Permanently delete "{{ eventToDelete?.title }}"?
+          </p>
+
           <div class="modal-actions">
-            <button type="button" class="btn btn-ghost" @click="showDeleteModal = false">Cancel</button>
-            <button type="button" class="btn btn-danger" @click="handleDelete">Delete</button>
+            <button type="button" class="btn btn-ghost" @click="closeDeleteModal">
+              Cancel
+            </button>
+
+            <button type="button" class="btn btn-danger" @click="handleDelete">
+              Delete
+            </button>
           </div>
         </div>
       </div>
@@ -162,5 +262,18 @@ function clearSuccess() {
 
 .filters-row .form-select {
   max-width: 200px;
+}
+
+.reject-textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 110px;
+  margin-top: 1rem;
+}
+
+.form-error {
+  color: var(--color-danger);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
 }
 </style>
