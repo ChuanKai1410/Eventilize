@@ -37,7 +37,20 @@ const links = computed(() => {
 })
 
 function isActive(path) {
+  if (user.value?.role === 'admin' && route.path.startsWith('/events/')) {
+    if (route.query.from === 'admin-approval' || route.query.from === 'admin-approvals') {
+      return path === '/admin/approvals'
+    }
+
+    if (route.query.from === 'admin-events') {
+      return path === '/admin/events'
+    }
+
+    return path === '/admin/events'
+  }
+
   if (path === '/events') return route.path === '/events'
+
   return route.path === path || route.path.startsWith(path + '/')
 }
 </script>
