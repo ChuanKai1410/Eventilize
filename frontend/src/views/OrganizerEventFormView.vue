@@ -99,7 +99,7 @@ function submit(status) {
 }
 
 function cancel() {
-  router.push('/organizer/events')
+  router.back()
 }
 
 function handleEventImage(event) {

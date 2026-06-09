@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from '../composables/useAuth.js'
+import OrganizerProfile from "../views/OrganizerProfile.vue"
 
 const routes = [
   {
@@ -72,6 +73,12 @@ const routes = [
     path: '/organizer/events/:id/edit',
     name: 'organizer-event-edit',
     component: () => import('../views/OrganizerEventFormView.vue'),
+    meta: { requiresAuth: true, roles: ['organizer'] },
+  },
+  {
+    path: "/organizer/profile",
+    name: "OrganizerProfile",
+    component: () => import("../views/OrganizerProfile.vue"),
     meta: { requiresAuth: true, roles: ['organizer'] },
   },
   {

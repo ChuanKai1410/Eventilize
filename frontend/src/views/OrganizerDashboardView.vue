@@ -5,6 +5,7 @@ import AnalyticsCard from '../components/AnalyticsCard.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { useAuth } from '../composables/useAuth.js'
 import { useEventStore } from '../composables/useEventStore.js'
+import OrganizerProfile from "../views/OrganizerProfile.vue"
 
 const { user } = useAuth()
 const { events } = useEventStore()
@@ -38,6 +39,9 @@ const chartHeights = [40, 65, 50, 80, 55, 70, 45]
       <div class="page-header">
         <h1>Organizer Dashboard</h1>
         <p>Welcome, {{ user?.name }}! Manage your events and track engagement.</p>
+        <router-link to="/profile" class="btn btn-primary">
+          View Profile
+        </router-link>
       </div>
 
       <div class="stats-grid">
