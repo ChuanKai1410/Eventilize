@@ -91,7 +91,7 @@ const chartHeights = [40, 65, 50, 80, 55, 70, 45]
                 <td>{{ event.viewsCount }}</td>
                 <td>
                   <div class="table-actions">
-                    <router-link :to="`/events/${event.id}`" class="btn btn-ghost btn-sm">View</router-link>
+                    <router-link :to="`/organizer/events/${event.id}`" class="btn btn-ghost btn-sm">View</router-link>
                     <router-link :to="`/organizer/events/${event.id}/edit`" class="btn btn-ghost btn-sm">Edit</router-link>
                   </div>
                 </td>
@@ -108,6 +108,22 @@ const chartHeights = [40, 65, 50, 80, 55, 70, 45]
 </template>
 
 <style scoped>
+.page-header h1 {
+  margin-bottom: 2rem;
+}
+
+.stats-grid {
+  margin-bottom: 2rem;
+}
+
+.analytics-section  {
+  margin-bottom: 2rem;
+}
+
+.section {
+  margin-bottom: 1rem;
+}
+
 .analytics-section h2 {
   font-size: 1.125rem;
   margin-bottom: 1rem;

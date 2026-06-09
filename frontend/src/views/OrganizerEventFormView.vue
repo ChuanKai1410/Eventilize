@@ -13,7 +13,7 @@ const { user } = useAuth()
 const { getEventById, addEvent, updateEvent, categories } = useEventStore()
 
 const isEdit = computed(() => !!route.params.id)
-const pageTitle = computed(() => (isEdit.value ? 'Edit Event' : 'Create Event'))
+const pageTitle = computed(() => (isEdit.value ? 'Update Event' : 'Create Event'))
 
 const form = ref({
   title: '',
@@ -25,11 +25,15 @@ const form = ref({
   location: '',
   mapLink: '',
   registrationLink: '',
+  eventImage: null,
+  poster: [],
 })
 
 const errors = ref({})
 const successMessage = ref('')
 const loading = ref(false)
+const eventImagePreview = ref('')
+const posterPreviews = ref([])
 
 const categoryOptions = computed(() => categories.value)
 
@@ -47,6 +51,7 @@ onMounted(() => {
         location: event.location,
         mapLink: event.mapLink || '',
         registrationLink: event.registrationLink || '',
+        eventImage: event.eventImage || null,
       }
     }
   }
@@ -96,6 +101,20 @@ function submit(status) {
 function cancel() {
   router.push('/organizer/events')
 }
+
+function handleEventImage(event) {
+  const file = event.target.files[0]
+  if(file) {
+    form.value.eventImage = file
+    eventImagePreview.value = URL.createObjectURL(file)
+  }
+}
+
+function handlePosterUpload(event) {
+  const files = Array.from(event.target.files)
+  form.value.poster = files
+  posterPreviews.value = files.map(file => URL.createObjectURL(file))
+}
 </script>
 
 <template>
@@ -134,6 +153,14 @@ function cancel() {
               <option v-for="cat in categoryOptions" :key="cat" :value="cat">{{ cat }}</option>
             </select>
             <p v-if="errors.category" class="form-error">{{ errors.category }}</p>
+            <label class="form-label">Event Pictures</label>
+            <input type="file" accept="image/*" @change="handleEventImage" />
+            <img v-if="eventImagePreview" :src="eventImagePreview" alt="Event Preview" class="preview-image" />
+            <label class="form-label">Event Posters</label>
+            <input type="file" accept="image/*" multiple @change="handlePosterUpload" />
+            <div v-if="posterPreviews.length" class="poster-previews-grid">
+              <img v-for="(poster, index) in posterPreviews" :key="index" :src="poster" alt="Poster Preview" class="preview-image" />
+            </div>
           </div>
           <div class="form-row">
             <FormInput
@@ -189,7 +216,7 @@ function cancel() {
               Save as Draft
             </button>
             <button type="button" class="btn btn-accent" :disabled="loading" @click="submit('Pending')">
-              Submit Event
+              {{ isEdit ? 'Update Event' : 'Submit Event' }}
             </button>
             <button type="button" class="btn btn-outline" @click="cancel">Cancel</button>
           </div>
@@ -202,6 +229,10 @@ function cancel() {
 <style scoped>
 .form-page {
   max-width: 720px;
+}
+
+.form-group {
+  margin-bottom: 1rem;
 }
 
 .form-row {
@@ -217,6 +248,21 @@ function cancel() {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--color-border);
+}
+
+.preview-image {
+  width: 120px;
+  height: auto;
+  margin-top: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.poster-previews-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
 }
 
 .required {

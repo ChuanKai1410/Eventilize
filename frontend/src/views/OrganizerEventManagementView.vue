@@ -79,7 +79,7 @@ function handleDelete() {
               <td>{{ event.bookmarksCount }}</td>
               <td>
                 <div class="table-actions">
-                  <router-link :to="`/events/${event.id}`" class="btn btn-ghost btn-sm">View</router-link>
+                  <router-link :to="`/organizer/events/${event.id}`" class="btn btn-ghost btn-sm">View</router-link>
                   <router-link :to="`/organizer/events/${event.id}/edit`" class="btn btn-ghost btn-sm">Edit</router-link>
                   <button type="button" class="btn btn-danger btn-sm" @click="confirmDelete(event)">Delete</button>
                 </div>
@@ -118,6 +118,12 @@ function handleDelete() {
   align-items: center;
   gap: 1rem;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.table-actions {
+  display: flex;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
