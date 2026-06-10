@@ -96,6 +96,7 @@ const filteredList = computed(() => {
             <label class="toggle-switch">
               <input
                 type="checkbox"
+                aria-label="Registration Deadline"
                 :checked="notificationSettings.registrationDeadline"
                 @change="toggleSetting('registrationDeadline')"
               />
