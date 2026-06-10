@@ -66,6 +66,7 @@ const filteredList = computed(() => {
             <label class="toggle-switch">
               <input
                 type="checkbox"
+                aria-label="New Event"
                 :checked="notificationSettings.newEvent"
                 @change="toggleSetting('newEvent')"
               />
