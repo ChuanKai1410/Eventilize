@@ -2,8 +2,11 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
+import StudentProtectedLayout from '../components/student/StudentProtectedLayout.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import EventCard from '../components/EventCard.vue'
+import StudentEventCard from '../components/student/StudentEventCard.vue'
+import BookmarkIcon from '../components/student/BookmarkIcon.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { useEventStore } from '../composables/useEventStore.js'
 import { useAuth } from '../composables/useAuth.js'
@@ -28,7 +31,32 @@ const showSidebar = computed(() => {
 const event = computed(() => getEventById(route.params.id))
 
 const isAdmin = computed(() => user.value?.role === 'admin')
+const isStudent = computed(() => user.value?.role === 'student')
 const isPendingEvent = computed(() => event.value?.status === 'Pending')
+
+const layoutComponent = computed(() =>
+  isStudent.value ? StudentProtectedLayout : ProtectedLayout
+)
+
+const categoryClass = computed(() => {
+  if (!event.value) return 'cat-default'
+  const map = {
+    'Tech Talk': 'cat-academic',
+    Seminar: 'cat-academic',
+    Career: 'cat-academic',
+    Workshop: 'cat-workshop',
+    Cultural: 'cat-cultural',
+    Sports: 'cat-sports',
+    Residential: 'cat-default',
+  }
+  if (
+    event.value.title?.toLowerCase().includes('hackathon') ||
+    event.value.title?.toLowerCase().includes('tournament')
+  ) {
+    return 'cat-competition'
+  }
+  return map[event.value.category] || 'cat-default'
+})
 
 const recommended = computed(() =>
   !isAdmin.value && event.value ? getRecommended(event.value.id, 3) : []
@@ -130,7 +158,7 @@ function clearSuccess() {
 </script>
 
 <template>
-  <ProtectedLayout :show-sidebar="showSidebar">
+  <component :is="layoutComponent" :show-sidebar="showSidebar">
     <div class="page-container">
       <router-link :to="backRoute" class="back-link">
         {{ backText }}
@@ -152,13 +180,40 @@ function clearSuccess() {
         <div class="event-detail card">
           <div class="card-body">
             <div class="detail-header">
-              <span class="category-badge">{{ event.category }}</span>
+              <div v-if="isStudent" class="category-block" :class="categoryClass">
+                <span class="category-block-label">Category</span>
+                <span class="category-block-value">{{ event.category }}</span>
+              </div>
+              <span v-else class="category-badge">{{ event.category }}</span>
               <StatusBadge v-if="isAdmin || event.status !== 'Approved'" :status="event.status" />
             </div>
 
             <h1>{{ event.title }}</h1>
 
-            <div class="detail-meta">
+            <div v-if="isStudent" class="info-boxes">
+              <div class="info-box info-date">
+                <span class="info-label">Date</span>
+                <span class="info-value">{{ formattedDate }}</span>
+              </div>
+              <div class="info-box info-time">
+                <span class="info-label">Time</span>
+                <span class="info-value">{{ event.startTime }} – {{ event.endTime }}</span>
+              </div>
+              <div class="info-box info-location">
+                <span class="info-label">Location</span>
+                <span class="info-value">{{ event.location }}</span>
+              </div>
+              <div class="info-box info-organizer">
+                <span class="info-label">Organizer</span>
+                <span class="info-value">{{ event.organizer }}</span>
+              </div>
+              <div class="info-box info-stats">
+                <span class="info-label">Engagement</span>
+                <span class="info-value">{{ event.viewsCount }} views · {{ event.bookmarksCount }} bookmarks</span>
+              </div>
+            </div>
+
+            <div v-else class="detail-meta">
               <div class="meta-item">
                 <strong>Date</strong>
                 <span>{{ formattedDate }}</span>
@@ -267,7 +322,16 @@ function clearSuccess() {
                   Register for Event
                 </a>
 
+                <BookmarkIcon
+                  v-if="isStudent"
+                  size="lg"
+                  show-label
+                  :active="event.isBookmarked"
+                  @toggle="handleBookmark"
+                />
+
                 <button
+                  v-else
                   type="button"
                   class="btn btn-ghost"
                   :class="{ active: event.isBookmarked }"
@@ -280,16 +344,26 @@ function clearSuccess() {
           </div>
         </div>
 
-        <section v-if="recommended.length" class="section">
+        <section v-if="recommended.length" class="section similar-section">
           <h2>Similar Events You Might Like</h2>
 
           <div class="events-grid">
-            <EventCard
-              v-for="rec in recommended"
-              :key="rec.id"
-              :event="rec"
-              @bookmark="toggleBookmark"
-            />
+            <template v-if="isStudent">
+              <StudentEventCard
+                v-for="rec in recommended"
+                :key="rec.id"
+                :event="rec"
+                @bookmark="toggleBookmark"
+              />
+            </template>
+            <template v-else>
+              <EventCard
+                v-for="rec in recommended"
+                :key="rec.id"
+                :event="rec"
+                @bookmark="toggleBookmark"
+              />
+            </template>
           </div>
         </section>
 
@@ -325,7 +399,7 @@ function clearSuccess() {
         </div>
       </template>
     </div>
-  </ProtectedLayout>
+  </component>
 </template>
 
 <style scoped>
@@ -431,5 +505,122 @@ function clearSuccess() {
 .section h2 {
   font-size: 1.25rem;
   margin-bottom: 1rem;
+}
+
+.similar-section {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.category-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 88px;
+  min-height: 72px;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+}
+
+.category-block-label {
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+  margin-bottom: 0.25rem;
+}
+
+.category-block-value {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.category-block.cat-academic {
+  background: #EDE9FE;
+  color: #6D28D9;
+}
+
+.category-block.cat-cultural {
+  background: #FCE7F3;
+  color: #BE185D;
+}
+
+.category-block.cat-competition {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.category-block.cat-workshop {
+  background: #DBEAFE;
+  color: #1D4ED8;
+}
+
+.category-block.cat-sports {
+  background: #FFEDD5;
+  color: #C2410C;
+}
+
+.category-block.cat-default {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
+
+.info-boxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.info-box {
+  padding: 0.875rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.info-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.info-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text);
+  line-height: 1.4;
+}
+
+.info-date {
+  background: rgba(139, 30, 63, 0.06);
+  border-color: rgba(139, 30, 63, 0.12);
+}
+
+.info-time {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+}
+
+.info-location {
+  background: #F0FDF4;
+  border-color: #BBF7D0;
+}
+
+.info-organizer {
+  background: #FFF7ED;
+  border-color: #FED7AA;
+}
+
+.info-stats {
+  background: var(--color-bg);
 }
 </style>
