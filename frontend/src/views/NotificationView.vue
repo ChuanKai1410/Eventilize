@@ -81,6 +81,7 @@ const filteredList = computed(() => {
             <label class="toggle-switch">
               <input
                 type="checkbox"
+                aria-label="Upcoming Event"
                 :checked="notificationSettings.upcomingEvent"
                 @change="toggleSetting('upcomingEvent')"
               />
