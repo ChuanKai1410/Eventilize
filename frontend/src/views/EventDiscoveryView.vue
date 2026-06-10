@@ -1,9 +1,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import StudentProtectedLayout from '../components/student/StudentProtectedLayout.vue'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
 import SearchBar from '../components/SearchBar.vue'
 import EventFilterBar from '../components/EventFilterBar.vue'
+import StudentEventCard from '../components/student/StudentEventCard.vue'
 import EventCard from '../components/EventCard.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { useEventStore } from '../composables/useEventStore.js'
@@ -13,7 +15,7 @@ const { fetchEvents, toggleBookmark } = useEventStore()
 const { isAuthenticated, user } = useAuth()
 const route = useRoute()
 
-const showSidebar = computed(() => isAuthenticated.value && user.value?.role === 'student')
+const isStudent = computed(() => isAuthenticated.value && user.value?.role === 'student')
 
 const events = ref([])
 const filteredEvents = ref([])
@@ -85,7 +87,7 @@ function onBookmark(id) {
 </script>
 
 <template>
-  <ProtectedLayout :show-sidebar="showSidebar">
+  <component :is="isStudent ? StudentProtectedLayout : ProtectedLayout" :show-sidebar="isStudent">
     <div class="page-container">
       <div class="page-header">
         <h1>Discover Events</h1>
@@ -108,12 +110,22 @@ function onBookmark(id) {
         </div>
 
         <div v-if="filteredEvents.length" class="events-grid">
-          <EventCard
-            v-for="event in filteredEvents"
-            :key="event.id"
-            :event="event"
-            @bookmark="onBookmark"
-          />
+          <template v-if="isStudent">
+            <StudentEventCard
+              v-for="event in filteredEvents"
+              :key="event.id"
+              :event="event"
+              @bookmark="onBookmark"
+            />
+          </template>
+          <template v-else>
+            <EventCard
+              v-for="event in filteredEvents"
+              :key="event.id"
+              :event="event"
+              @bookmark="onBookmark"
+            />
+          </template>
         </div>
 
         <EmptyState
@@ -125,7 +137,7 @@ function onBookmark(id) {
         />
       </template>
     </div>
-  </ProtectedLayout>
+  </component>
 </template>
 
 <style scoped>

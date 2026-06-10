@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuth } from '../composables/useAuth.js'
-import OrganizerProfile from "../views/OrganizerProfile.vue"
 
 const routes = [
   {
@@ -25,6 +24,12 @@ const routes = [
     path: '/student/dashboard',
     name: 'student-dashboard',
     component: () => import('../views/StudentDashboardView.vue'),
+    meta: { requiresAuth: true, roles: ['student'] },
+  },
+  {
+    path: '/student/profile',
+    name: 'student-profile',
+    component: () => import('../views/StudentProfileView.vue'),
     meta: { requiresAuth: true, roles: ['student'] },
   },
   {

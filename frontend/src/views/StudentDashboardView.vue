@@ -1,36 +1,29 @@
 <script setup>
 import { computed } from 'vue'
-import ProtectedLayout from '../components/ProtectedLayout.vue'
+import StudentProtectedLayout from '../components/student/StudentProtectedLayout.vue'
 import AnalyticsCard from '../components/AnalyticsCard.vue'
-import EventCard from '../components/EventCard.vue'
-import NotificationItem from '../components/NotificationItem.vue'
+import StudentEventCard from '../components/student/StudentEventCard.vue'
+import EventCalendar from '../components/student/EventCalendar.vue'
+import RegisteredEventsTabs from '../components/student/RegisteredEventsTabs.vue'
 import { useAuth } from '../composables/useAuth.js'
 import { useEventStore } from '../composables/useEventStore.js'
 import { useNotifications } from '../composables/useNotifications.js'
+import { useRegisteredEvents } from '../composables/useRegisteredEvents.js'
 
 const { user } = useAuth()
-const { approvedEvents, bookmarkedEvents, toggleBookmark, getRecommended } = useEventStore()
-const { notifications, unreadCount, markAsRead } = useNotifications()
+const { approvedEvents, toggleBookmark, getRecommended } = useEventStore()
+const { unreadCount } = useNotifications()
+const { upcomingRegistered, pastRegistered } = useRegisteredEvents()
 
 const upcomingCount = computed(() =>
   approvedEvents.value.filter((e) => e.eventDate >= new Date().toISOString().slice(0, 10)).length
 )
 
 const recommended = computed(() => getRecommended(null, 3))
-
-const upcomingBookmarked = computed(() =>
-  bookmarkedEvents.value.filter((e) => e.eventDate >= new Date().toISOString().slice(0, 10)).slice(0, 3)
-)
-
-const recentNotifications = computed(() =>
-  [...notifications.value]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 3)
-)
 </script>
 
 <template>
-  <ProtectedLayout>
+  <StudentProtectedLayout>
     <div class="page-container">
       <div class="page-header">
         <h1>Welcome back, {{ user?.name }}!</h1>
@@ -39,10 +32,25 @@ const recentNotifications = computed(() =>
 
       <div class="stats-grid">
         <AnalyticsCard label="Upcoming Events" :value="upcomingCount" icon="calendar" />
-        <AnalyticsCard label="Bookmarked Events" :value="bookmarkedEvents.length" icon="bookmark" />
+        <AnalyticsCard label="Registered Events" :value="upcomingRegistered.length + pastRegistered.length" icon="chart" />
         <AnalyticsCard label="Unread Notifications" :value="unreadCount" icon="bell" />
         <AnalyticsCard label="Recommended Events" :value="recommended.length" icon="chart" />
       </div>
+
+      <section class="section">
+        <EventCalendar @bookmark="toggleBookmark" />
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <h2>Upcoming Registered</h2>
+        </div>
+        <RegisteredEventsTabs
+          :upcoming="upcomingRegistered"
+          :past="pastRegistered"
+          @bookmark="toggleBookmark"
+        />
+      </section>
 
       <section class="section">
         <div class="section-title">
@@ -50,7 +58,7 @@ const recentNotifications = computed(() =>
           <router-link to="/events">View all</router-link>
         </div>
         <div class="events-grid">
-          <EventCard
+          <StudentEventCard
             v-for="event in recommended"
             :key="event.id"
             :event="event"
@@ -58,46 +66,13 @@ const recentNotifications = computed(() =>
           />
         </div>
       </section>
-
-      <section class="section">
-        <div class="section-title">
-          <h2>Upcoming Bookmarked Events</h2>
-          <router-link to="/bookmarks">View bookmarks</router-link>
-        </div>
-        <div v-if="upcomingBookmarked.length" class="events-grid">
-          <EventCard
-            v-for="event in upcomingBookmarked"
-            :key="event.id"
-            :event="event"
-            @bookmark="toggleBookmark"
-          />
-        </div>
-        <p v-else class="empty-hint">Bookmark events to see them here.</p>
-      </section>
-
-      <section class="section">
-        <div class="section-title">
-          <h2>Recent Notifications</h2>
-          <router-link to="/notifications">View all</router-link>
-        </div>
-        <NotificationItem
-          v-for="notif in recentNotifications"
-          :key="notif.id"
-          :notification="notif"
-          @mark-read="markAsRead"
-        />
-      </section>
     </div>
-  </ProtectedLayout>
+  </StudentProtectedLayout>
 </template>
 
 <style scoped>
 .section-title h2 {
-  font-size: 1.25rem;
-}
-
-.empty-hint {
-  color: var(--color-text-muted);
-  font-size: 0.9375rem;
+  font-size: 1.125rem;
+  font-weight: 600;
 }
 </style>
