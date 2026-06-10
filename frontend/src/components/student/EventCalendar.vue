@@ -69,6 +69,8 @@ function prevMonth() {
   } else {
     viewMonth.value -= 1
   }
+
+  selectedDate.value = `${viewYear.value}-${String(viewMonth.value + 1).padStart(2, '0')}-01`
 }
 
 function nextMonth() {
