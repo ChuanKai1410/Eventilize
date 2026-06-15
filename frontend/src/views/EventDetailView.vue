@@ -210,7 +210,7 @@ function clearSuccess() {
 
             <h1>{{ event.title }}</h1>
 
-            <div v-if="event.status === 'Rejected' && event.rejectReason && (isAdmin || user?.role === 'organizer')" class="alert alert-error reject-reason-banner">
+            <div v-if="event.status === 'Rejected' && event.rejectReason && (isAdmin || isOrganizerEvent)" class="alert alert-error reject-reason-banner">
               <strong>Rejection Reason:</strong>
               <p class="reject-reason-text">{{ event.rejectReason }}</p>
             </div>
