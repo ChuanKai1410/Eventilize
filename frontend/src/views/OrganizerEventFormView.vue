@@ -41,6 +41,11 @@ onMounted(() => {
   if (isEdit.value) {
     const event = getEventById(route.params.id)
     if (event) {
+      const eventImage = typeof event.eventImage === 'string' ? event.eventImage : null
+      const poster = Array.isArray(event.poster)
+        ? event.poster.filter((item) => typeof item === 'string')
+        : []
+
       form.value = {
         title: event.title,
         description: event.description,
@@ -51,8 +56,11 @@ onMounted(() => {
         location: event.location,
         mapLink: event.mapLink || '',
         registrationLink: event.registrationLink || '',
-        eventImage: event.eventImage || null,
+        eventImage,
+        poster,
       }
+      eventImagePreview.value = eventImage || ''
+      posterPreviews.value = poster
     }
   }
 })
@@ -102,18 +110,29 @@ function cancel() {
   router.back()
 }
 
-function handleEventImage(event) {
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+async function handleEventImage(event) {
   const file = event.target.files[0]
   if(file) {
-    form.value.eventImage = file
-    eventImagePreview.value = URL.createObjectURL(file)
+    const dataUrl = await readFileAsDataUrl(file)
+    form.value.eventImage = dataUrl
+    eventImagePreview.value = dataUrl
   }
 }
 
-function handlePosterUpload(event) {
+async function handlePosterUpload(event) {
   const files = Array.from(event.target.files)
-  form.value.poster = files
-  posterPreviews.value = files.map(file => URL.createObjectURL(file))
+  const dataUrls = await Promise.all(files.map((file) => readFileAsDataUrl(file)))
+  form.value.poster = dataUrls
+  posterPreviews.value = dataUrls
 }
 </script>
 

@@ -16,8 +16,7 @@ const studentLinks = [
 const organizerLinks = [
   { to: '/organizer/dashboard', label: 'Dashboard', icon: 'home' },
   { to: '/organizer/events/create', label: 'Create Event', icon: 'plus' },
-  { to: '/organizer/events', label: 'Manage Events', icon: 'list' },
-  { to: '/organizer/profile', label: 'Profile', icon: 'user' }
+  { to: '/organizer/events', label: 'Manage Events', icon: 'list' }
 ]
 
 const adminLinks = [
@@ -38,6 +37,10 @@ const links = computed(() => {
 })
 
 function isActive(path) {
+  if (user.value?.role === 'organizer' && route.path.startsWith('/events/')) {
+    return path === '/organizer/events' && route.query.from === 'organizer-events'
+  }
+
   if (user.value?.role === 'admin' && route.path.startsWith('/events/')) {
     if (route.query.from === 'admin-approval' || route.query.from === 'admin-approvals') {
       return path === '/admin/approvals'
@@ -51,6 +54,10 @@ function isActive(path) {
   }
 
   if (path === '/events') return route.path === '/events'
+
+  if (path === '/organizer/events') {
+    return route.path === '/organizer/events' || (route.path.startsWith('/organizer/events/') && route.path !== '/organizer/events/create')
+  }
 
   return route.path === path || route.path.startsWith(path + '/')
 }
@@ -163,6 +170,15 @@ function isActive(path) {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+}
+
+@media (min-width: 769px) {
+  .sidebar {
+    position: sticky;
+    top: var(--navbar-height);
+    height: calc(100vh - var(--navbar-height));
+    overflow-y: auto;
+  }
 }
 
 @media (max-width: 768px) {

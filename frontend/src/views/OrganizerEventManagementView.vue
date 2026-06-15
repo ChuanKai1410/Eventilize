@@ -79,7 +79,12 @@ function handleDelete() {
               <td>{{ event.bookmarksCount }}</td>
               <td>
                 <div class="table-actions">
-                  <router-link :to="`/organizer/events/${event.id}`" class="btn btn-ghost btn-sm">View</router-link>
+                  <router-link
+                    :to="{ path: `/events/${event.id}`, query: { from: 'organizer-events' } }"
+                    class="btn btn-ghost btn-sm"
+                  >
+                    View
+                  </router-link>
                   <router-link :to="`/organizer/events/${event.id}/edit`" class="btn btn-ghost btn-sm">Edit</router-link>
                   <button type="button" class="btn btn-danger btn-sm" @click="confirmDelete(event)">Delete</button>
                 </div>

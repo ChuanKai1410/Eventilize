@@ -35,7 +35,15 @@ const categoryClass = computed(() => {
   return map[props.event.category] || 'cat-default'
 })
 
+const eventImageSrc = computed(() =>
+  typeof props.event.eventImage === 'string' ? props.event.eventImage : ''
+)
+
 const thumbnailStyle = computed(() => {
+  if (eventImageSrc.value) {
+    return { backgroundImage: `url(${eventImageSrc.value})` }
+  }
+
   const hues = {
     'cat-academic': 'linear-gradient(135deg, #EDE9FE 0%, #C4B5FD 100%)',
     'cat-cultural': 'linear-gradient(135deg, #FCE7F3 0%, #F9A8D4 100%)',
@@ -75,6 +83,12 @@ function toggleBookmark() {
 
     <template v-else>
       <div class="event-thumbnail" :style="thumbnailStyle">
+        <img
+          v-if="eventImageSrc"
+          :src="eventImageSrc"
+          :alt="event.title"
+          class="event-thumbnail-img"
+        />
         <span class="category-badge" :class="categoryClass">{{ event.category }}</span>
       </div>
       <div class="card-body">
@@ -119,10 +133,20 @@ function toggleBookmark() {
   display: flex;
   align-items: flex-end;
   padding: 0.75rem;
+  overflow: hidden;
 }
 
 .event-thumbnail .category-badge {
-  position: static;
+  position: relative;
+  z-index: 1;
+}
+
+.event-thumbnail-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .card-body {

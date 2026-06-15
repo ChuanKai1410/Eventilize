@@ -7,16 +7,6 @@ const { categories, addCategory } = useEventStore()
 
 const newCategory = ref('')
 const categoryMessage = ref('')
-const showAdminProfile = ref(false)
-
-const adminProfile = ref({
-  name: 'Platform Admin',
-  email: 'admin@utm.my',
-  role: 'Administrator',
-  accountType: 'Admin Account',
-  accountStatus: 'Active',
-  joinedDate: '2026-01-01',
-})
 
 const notificationSettings = ref({
   pendingApprovalAlert: true,
@@ -62,61 +52,10 @@ function deleteCategory(cat) {
     <div class="page-container settings-page">
       <div class="page-header">
         <h1>Platform Settings</h1>
-        <p>Manage categories, notifications, admin profile, and platform quality.</p>
+        <p>Manage categories, notifications, and platform quality.</p>
       </div>
 
       <div class="settings-grid">
-        <section class="card">
-          <div class="card-body">
-            <div class="profile-header">
-              <div>
-                <h2>Admin Profile</h2>
-                <p class="section-desc">View administrator account details.</p>
-              </div>
-
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm"
-                @click="showAdminProfile = !showAdminProfile"
-              >
-                {{ showAdminProfile ? 'Hide Profile' : 'View Profile' }}
-              </button>
-            </div>
-
-            <div v-if="showAdminProfile" class="profile-details">
-              <div class="profile-detail">
-                <strong>Name</strong>
-                <span>{{ adminProfile.name }}</span>
-              </div>
-
-              <div class="profile-detail">
-                <strong>Email</strong>
-                <span>{{ adminProfile.email }}</span>
-              </div>
-
-              <div class="profile-detail">
-                <strong>Role</strong>
-                <span>{{ adminProfile.role }}</span>
-              </div>
-
-              <div class="profile-detail">
-                <strong>Account Type</strong>
-                <span>{{ adminProfile.accountType }}</span>
-              </div>
-
-              <div class="profile-detail">
-                <strong>Status</strong>
-                <span>{{ adminProfile.accountStatus }}</span>
-              </div>
-
-              <div class="profile-detail">
-                <strong>Joined Date</strong>
-                <span>{{ adminProfile.joinedDate }}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section class="card">
           <div class="card-body">
             <h2>Category Management</h2>
@@ -256,35 +195,6 @@ function deleteCategory(cat) {
 .card h2 {
   font-size: 1.125rem;
   margin-bottom: 0.25rem;
-}
-
-.profile-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.profile-details {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 1rem;
-  padding: 1rem;
-  background: var(--color-bg);
-  border-radius: var(--radius-sm);
-}
-
-.profile-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.profile-detail strong {
-  font-size: 0.75rem;
-  color: var(--color-text-muted);
-  text-transform: uppercase;
 }
 
 .add-category {

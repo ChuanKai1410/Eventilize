@@ -43,14 +43,11 @@ function confirmAction() {
   }
 
   const status = modalAction.value === 'approve' ? 'Approved' : 'Rejected'
-
-  updateEventStatus(selectedEvent.value.id, status)
-
-  if (modalAction.value === 'reject') {
-    selectedEvent.value.rejectReason = rejectReason.value.trim()
-  } else {
-    selectedEvent.value.rejectReason = ''
+  const extraFields = {
+    rejectReason: modalAction.value === 'reject' ? rejectReason.value.trim() : ''
   }
+
+  updateEventStatus(selectedEvent.value.id, status, extraFields)
 
   successMessage.value =
     modalAction.value === 'approve'

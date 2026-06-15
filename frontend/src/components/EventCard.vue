@@ -37,7 +37,15 @@ const categoryClass = computed(() => {
   return map[props.event.category] || 'cat-default'
 })
 
+const eventImageSrc = computed(() =>
+  typeof props.event.eventImage === 'string' ? props.event.eventImage : ''
+)
+
 const thumbnailStyle = computed(() => {
+  if (eventImageSrc.value) {
+    return { backgroundImage: `url(${eventImageSrc.value})` }
+  }
+
   const hues = {
     'cat-academic': 'linear-gradient(135deg, #EDE9FE 0%, #C4B5FD 100%)',
     'cat-cultural': 'linear-gradient(135deg, #FCE7F3 0%, #F9A8D4 100%)',
@@ -64,8 +72,14 @@ function toggleBookmark() {
 <template>
   <article class="event-card card" :class="{ 'preview-only': previewOnly }">
     <div class="event-thumbnail" :style="thumbnailStyle">
+      <img
+        v-if="eventImageSrc"
+        :src="eventImageSrc"
+        :alt="event.title"
+        class="event-thumbnail-img"
+      />
       <span class="category-badge" :class="categoryClass">{{ event.category }}</span>
-      <div class="thumbnail-icon" aria-hidden="true">
+      <div v-if="!eventImageSrc" class="thumbnail-icon" aria-hidden="true">
         <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.35">
           <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
@@ -148,12 +162,22 @@ function toggleBookmark() {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .event-thumbnail .category-badge {
   position: absolute;
   top: 0.75rem;
   left: 0.75rem;
+  z-index: 1;
+}
+
+.event-thumbnail-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .thumbnail-icon {

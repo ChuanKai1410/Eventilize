@@ -28,6 +28,24 @@ const userInitials = computed(() => {
     .toUpperCase()
 })
 
+const isDropdownOpen = ref(false)
+
+function toggleDropdown() {
+  isDropdownOpen.value = !isDropdownOpen.value
+}
+
+function closeDropdown() {
+  isDropdownOpen.value = false
+}
+
+function goToProfile() {
+  if (user.value?.role === 'organizer') {
+    router.push('/organizer/profile')
+  } else if (user.value?.role === 'admin') {
+    router.push('/admin/profile')
+  }
+}
+
 function handleLogout() {
   logout()
   router.push('/')
@@ -94,15 +112,36 @@ function handleSearch() {
             <span v-if="unreadCount > 0" class="notif-badge">{{ unreadCount }}</span>
           </router-link>
 
-          <div class="user-profile">
-            <span class="user-avatar">{{ userInitials }}</span>
-            <div class="user-info">
-              <span class="user-name">{{ user.name }}</span>
-              <span class="user-role">{{ roleLabel }}</span>
-            </div>
-          </div>
+          <div class="user-profile-container">
+            <button type="button" class="user-profile" aria-label="Toggle user menu" @click="toggleDropdown">
+              <span class="user-avatar">{{ userInitials }}</span>
+              <div class="user-info">
+                <span class="user-name">{{ user.name }}</span>
+                <span class="user-role">{{ roleLabel }}</span>
+              </div>
+              <svg class="dropdown-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
 
-          <button type="button" class="btn btn-text btn-sm" @click="handleLogout">Logout</button>
+            <div v-if="isDropdownOpen" class="profile-dropdown">
+              <button type="button" class="dropdown-item" @click="goToProfile(); closeDropdown()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                View Profile
+              </button>
+              <button type="button" class="dropdown-item logout-item" @click="handleLogout(); closeDropdown()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Logout
+              </button>
+            </div>
+
+            <div v-if="isDropdownOpen" class="dropdown-overlay" @click="closeDropdown"></div>
+          </div>
         </template>
       </nav>
     </div>
@@ -245,6 +284,96 @@ function handleSearch() {
   display: flex;
   align-items: center;
   gap: 0.625rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.user-profile:hover {
+  background: var(--color-maroon-tint);
+}
+
+.user-profile-container {
+  position: relative;
+}
+
+.dropdown-chevron {
+  color: var(--color-text-muted);
+  transition: transform var(--transition);
+}
+
+.user-profile:hover .dropdown-chevron {
+  color: var(--color-primary);
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 0.375rem;
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  z-index: 100;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: var(--transition);
+  font-family: inherit;
+}
+
+.dropdown-item:hover {
+  background: var(--color-bg);
+  color: var(--color-primary);
+}
+
+.dropdown-item.logout-item {
+  color: var(--color-danger);
+}
+
+.dropdown-item.logout-item:hover {
+  background: #FEF2F2;
+  color: var(--color-danger);
+}
+
+.dropdown-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
 }
 
 .user-avatar {
