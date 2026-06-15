@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
 import StudentProtectedLayout from '../components/student/StudentProtectedLayout.vue'
 import StatusBadge from '../components/StatusBadge.vue'
@@ -12,6 +12,7 @@ import { useEventStore } from '../composables/useEventStore.js'
 import { useAuth } from '../composables/useAuth.js'
 
 const route = useRoute()
+const router = useRouter()
 
 const {
   getEventById,
@@ -32,7 +33,23 @@ const event = computed(() => getEventById(route.params.id))
 
 const isAdmin = computed(() => user.value?.role === 'admin')
 const isStudent = computed(() => user.value?.role === 'student')
+const isOrganizer = computed(() => user.value?.role === 'organizer')
 const isPendingEvent = computed(() => event.value?.status === 'Pending')
+const isOrganizerEvent = computed(() => {
+  if (!event.value || !user.value) return false
+  const organizerName = user.value.organizerName || user.value.name
+  return user.value.role === 'organizer' && event.value.organizer === organizerName
+})
+
+const eventImageSrc = computed(() =>
+  typeof event.value?.eventImage === 'string' ? event.value.eventImage : ''
+)
+
+const posterImages = computed(() =>
+  Array.isArray(event.value?.poster)
+    ? event.value.poster.filter((poster) => typeof poster === 'string')
+    : []
+)
 
 const layoutComponent = computed(() =>
   isStudent.value ? StudentProtectedLayout : ProtectedLayout
@@ -59,10 +76,10 @@ const categoryClass = computed(() => {
 })
 
 const recommended = computed(() =>
-  !isAdmin.value && event.value ? getRecommended(event.value.id, 3) : []
+  !isAdmin.value && !isOrganizer.value && event.value ? getRecommended(event.value.id, 3) : []
 )
 
-const backRoute = computed(() => {
+const fallbackBackRoute = computed(() => {
   if (isAdmin.value && route.query.from === 'admin-approval') {
     return '/admin/approvals'
   }
@@ -71,19 +88,11 @@ const backRoute = computed(() => {
     return '/admin/events'
   }
 
+  if (isOrganizer.value && route.query.from === 'organizer-events') {
+    return '/organizer/events'
+  }
+
   return '/events'
-})
-
-const backText = computed(() => {
-  if (isAdmin.value && route.query.from === 'admin-approval') {
-    return '← Back to approvals'
-  }
-
-  if (isAdmin.value && route.query.from === 'admin-events') {
-    return '← Back to event management'
-  }
-
-  return '← Back to events'
 })
 
 const showRejectModal = ref(false)
@@ -112,11 +121,23 @@ function handleBookmark() {
   if (event.value) toggleBookmark(event.value.id)
 }
 
+function goBack() {
+  if (window.history.state?.back) {
+    router.back()
+    return
+  }
+
+  router.push(fallbackBackRoute.value)
+}
+
+function goToEdit() {
+  if (event.value) router.push(`/organizer/events/${event.value.id}/edit`)
+}
+
 function approveEvent() {
   if (!event.value) return
 
-  updateEventStatus(event.value.id, 'Approved')
-  event.value.rejectReason = ''
+  updateEventStatus(event.value.id, 'Approved', { rejectReason: '' })
 
   successMessage.value = `Event "${event.value.title}" has been approved.`
   clearSuccess()
@@ -142,8 +163,7 @@ function confirmReject() {
 
   if (!event.value) return
 
-  updateEventStatus(event.value.id, 'Rejected')
-  event.value.rejectReason = rejectReason.value.trim()
+  updateEventStatus(event.value.id, 'Rejected', { rejectReason: rejectReason.value.trim() })
 
   successMessage.value = `Event "${event.value.title}" has been rejected.`
   closeRejectModal()
@@ -160,9 +180,9 @@ function clearSuccess() {
 <template>
   <component :is="layoutComponent" :show-sidebar="showSidebar">
     <div class="page-container">
-      <router-link :to="backRoute" class="back-link">
-        {{ backText }}
-      </router-link>
+      <button type="button" class="back-link" @click="goBack">
+        Back
+      </button>
 
       <div v-if="successMessage" class="alert alert-success">
         {{ successMessage }}
@@ -189,6 +209,30 @@ function clearSuccess() {
             </div>
 
             <h1>{{ event.title }}</h1>
+
+            <div v-if="event.status === 'Rejected' && event.rejectReason && (isAdmin || isOrganizerEvent)" class="alert alert-error reject-reason-banner">
+              <strong>Rejection Reason:</strong>
+              <p class="reject-reason-text">{{ event.rejectReason }}</p>
+            </div>
+
+            <div v-if="eventImageSrc || posterImages.length" class="event-media">
+              <img
+                v-if="eventImageSrc"
+                :src="eventImageSrc"
+                :alt="event.title"
+                class="event-main-image"
+              />
+
+              <div v-if="posterImages.length" class="poster-grid">
+                <img
+                  v-for="(poster, index) in posterImages"
+                  :key="index"
+                  :src="poster"
+                  :alt="`${event.title} poster ${index + 1}`"
+                  class="poster-image"
+                />
+              </div>
+            </div>
 
             <div v-if="isStudent" class="info-boxes">
               <div class="info-box info-date">
@@ -312,8 +356,18 @@ function clearSuccess() {
               </template>
 
               <template v-else>
+                <button
+                  v-if="isOrganizer"
+                  type="button"
+                  class="btn btn-accent"
+                  :disabled="!isOrganizerEvent"
+                  @click="goToEdit"
+                >
+                  Edit Event
+                </button>
+
                 <a
-                  v-if="event.registrationLink"
+                  v-else-if="event.registrationLink"
                   :href="event.registrationLink"
                   target="_blank"
                   rel="noopener noreferrer"
@@ -331,7 +385,7 @@ function clearSuccess() {
                 />
 
                 <button
-                  v-else
+                  v-else-if="!isOrganizer"
                   type="button"
                   class="btn btn-ghost"
                   :class="{ active: event.isBookmarked }"
@@ -404,12 +458,18 @@ function clearSuccess() {
 
 <style scoped>
 .back-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   margin-bottom: 1rem;
   font-weight: 500;
   font-size: 0.875rem;
   color: var(--color-primary);
   text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .back-link:hover {
@@ -622,5 +682,54 @@ function clearSuccess() {
 
 .info-stats {
   background: var(--color-bg);
+}
+
+.event-media {
+  display: grid;
+  gap: 0.875rem;
+  margin-bottom: 1.5rem;
+}
+
+.event-main-image {
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.poster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.poster-image {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.reject-reason-banner {
+  margin-top: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.reject-reason-banner strong {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  color: var(--color-danger);
+}
+
+.reject-reason-text {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--color-danger);
+  opacity: 0.9;
 }
 </style>

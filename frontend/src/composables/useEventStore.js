@@ -89,8 +89,12 @@ export function useEventStore() {
     return true
   }
 
-  function updateEventStatus(id, status) {
-    return updateEvent(id, { status })
+  function updateEventStatus(id, status, extraFields = {}) {
+    return updateEvent(id, {
+      status,
+      statusUpdatedAt: new Date().toISOString(),
+      ...extraFields
+    })
   }
 
   function getRecommended(excludeId = null, limit = 3) {

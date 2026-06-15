@@ -32,8 +32,7 @@ const filteredEvents = computed(() => {
 })
 
 function approve(event) {
-  updateEventStatus(event.id, 'Approved')
-  event.rejectReason = ''
+  updateEventStatus(event.id, 'Approved', { rejectReason: '' })
   successMessage.value = `"${event.title}" approved.`
   clearSuccess()
 }
@@ -60,8 +59,7 @@ function confirmReject() {
 
   if (!eventToReject.value) return
 
-  updateEventStatus(eventToReject.value.id, 'Rejected')
-  eventToReject.value.rejectReason = rejectReason.value.trim()
+  updateEventStatus(eventToReject.value.id, 'Rejected', { rejectReason: rejectReason.value.trim() })
 
   successMessage.value = `"${eventToReject.value.title}" rejected.`
   closeRejectModal()
@@ -92,6 +90,21 @@ function clearSuccess() {
   setTimeout(() => {
     successMessage.value = ''
   }, 3000)
+}
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return '—'
+
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return '—'
+
+  return d.toLocaleString('en-MY', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 }
 </script>
 
@@ -140,6 +153,7 @@ function clearSuccess() {
               <th>Category</th>
               <th>Date</th>
               <th>Status</th>
+              <th>Status Updated Date</th>
               <th>Views</th>
               <th>Bookmarks</th>
               <th>Actions</th>
@@ -155,6 +169,7 @@ function clearSuccess() {
               <td>
                 <StatusBadge :status="event.status" />
               </td>
+              <td>{{ formatDateTime(event.statusUpdatedAt) }}</td>
               <td>{{ event.viewsCount }}</td>
               <td>{{ event.bookmarksCount }}</td>
               <td>

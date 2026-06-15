@@ -49,6 +49,12 @@ defineProps({
 
     <main class="auth-form-panel">
       <div class="auth-form-inner">
+        <router-link to="/" class="auth-back-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Back to Home
+        </router-link>
         <h1>{{ title }}</h1>
         <p v-if="subtitle" class="auth-subtitle">{{ subtitle }}</p>
         <slot />
@@ -135,6 +141,23 @@ defineProps({
   height: 36px;
   background: rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-sm);
+}
+
+.auth-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  text-decoration: none;
+  margin-bottom: 1.5rem;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.auth-back-link:hover {
+  color: var(--color-primary);
+  text-decoration: none;
 }
 
 .auth-form-panel {

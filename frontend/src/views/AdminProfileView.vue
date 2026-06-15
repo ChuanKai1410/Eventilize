@@ -1,30 +1,36 @@
 <script setup>
 import { computed } from 'vue'
-import StudentProtectedLayout from '../components/student/StudentProtectedLayout.vue'
+import ProtectedLayout from '../components/ProtectedLayout.vue'
 import { useAuth } from '../composables/useAuth.js'
-import { useRegisteredEvents } from '../composables/useRegisteredEvents.js'
 import { useEventStore } from '../composables/useEventStore.js'
 
 const { user } = useAuth()
-const { registeredEvents } = useRegisteredEvents()
-const { bookmarkedEvents } = useEventStore()
+const { events } = useEventStore()
 
 const memberSince = computed(() => 'January 2026')
 
+const stats = computed(() => ({
+  total: events.value.length,
+  pending: events.value.filter((e) => e.status === 'Pending').length,
+  approved: events.value.filter((e) => e.status === 'Approved').length,
+  rejected: events.value.filter((e) => e.status === 'Rejected').length,
+}))
+
 const profileDetails = computed(() => [
-  { label: 'Full Name', value: user.value?.name || '—' },
-  { label: 'Email', value: user.value?.email || '—' },
-  { label: 'Role', value: 'Student' },
-  { label: 'Faculty', value: 'Faculty of Computing' },
+  { label: 'Full Name', value: user.value?.name || 'Platform Admin' },
+  { label: 'Email', value: user.value?.email || 'admin@utm.my' },
+  { label: 'Role', value: 'Administrator' },
+  { label: 'Account Type', value: 'Admin Account' },
+  { label: 'Account Status', value: 'Active' },
   { label: 'Member Since', value: memberSince.value },
 ])
 </script>
 
 <template>
-  <StudentProtectedLayout>
+  <ProtectedLayout>
     <div class="page-container profile-page">
       <div class="profile-actions-top">
-        <router-link to="/student/dashboard" class="btn-back">
+        <router-link to="/admin/dashboard" class="btn-back">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 12H5M12 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
@@ -34,19 +40,19 @@ const profileDetails = computed(() => [
 
       <div class="page-header">
         <h1>My Profile</h1>
-        <p>View and manage your Eventilize account details.</p>
+        <p>View and manage your Eventilize administrator account details.</p>
       </div>
 
       <div class="profile-grid">
         <section class="profile-card card">
           <div class="card-body profile-hero">
             <div class="profile-avatar">
-              {{ user?.name?.charAt(0)?.toUpperCase() || 'S' }}
+              {{ user?.name?.charAt(0)?.toUpperCase() || 'A' }}
             </div>
             <div>
-              <h2>{{ user?.name }}</h2>
-              <p class="profile-email">{{ user?.email }}</p>
-              <span class="role-badge">Student</span>
+              <h2>{{ user?.name || 'Platform Admin' }}</h2>
+              <p class="profile-email">{{ user?.email || 'admin@utm.my' }}</p>
+              <span class="role-badge">Administrator</span>
             </div>
           </div>
         </section>
@@ -65,28 +71,54 @@ const profileDetails = computed(() => [
 
         <section class="profile-card card">
           <div class="card-body">
-            <h3>Activity Summary</h3>
+            <h3>Platform Summary</h3>
             <div class="summary-stats">
               <div class="summary-stat">
-                <span class="stat-value">{{ registeredEvents.length }}</span>
-                <span class="stat-label">Registered Events</span>
+                <span class="stat-value">{{ stats.total }}</span>
+                <span class="stat-label">Total Events</span>
               </div>
               <div class="summary-stat">
-                <span class="stat-value">{{ bookmarkedEvents.length }}</span>
-                <span class="stat-label">Bookmarked Events</span>
+                <span class="stat-value">{{ stats.pending }}</span>
+                <span class="stat-label">Pending Events</span>
+              </div>
+              <div class="summary-stat">
+                <span class="stat-value">{{ stats.approved }}</span>
+                <span class="stat-label">Approved Events</span>
+              </div>
+              <div class="summary-stat">
+                <span class="stat-value">{{ stats.rejected }}</span>
+                <span class="stat-label">Rejected Events</span>
               </div>
             </div>
           </div>
         </section>
       </div>
-
     </div>
-  </StudentProtectedLayout>
+  </ProtectedLayout>
 </template>
 
 <style scoped>
 .profile-page {
   max-width: 880px;
+}
+
+.profile-actions-top {
+  margin-bottom: 1rem;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  transition: var(--transition);
+}
+
+.btn-back:hover {
+  color: var(--color-primary);
+  text-decoration: none;
 }
 
 .profile-grid {
@@ -175,7 +207,7 @@ const profileDetails = computed(() => [
 
 .summary-stats {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 1rem;
 }
 
@@ -196,24 +228,5 @@ const profileDetails = computed(() => [
 .stat-label {
   font-size: 0.8125rem;
   color: var(--color-text-muted);
-}
-
-.profile-actions-top {
-  margin-bottom: 1rem;
-}
-
-.btn-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-text-muted);
-  transition: var(--transition);
-}
-
-.btn-back:hover {
-  color: var(--color-primary);
-  text-decoration: none;
 }
 </style>
