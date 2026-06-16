@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
 import AnalyticsCard from '../components/AnalyticsCard.vue'
 import StatusBadge from '../components/StatusBadge.vue'
@@ -7,7 +7,11 @@ import { useAuth } from '../composables/useAuth.js'
 import { useEventStore } from '../composables/useEventStore.js'
 
 const { user } = useAuth()
-const { events } = useEventStore()
+const { events, fetchEvents } = useEventStore()
+
+onMounted(() => {
+  fetchEvents()
+})
 
 const organizerName = computed(() => user.value?.organizerName || 'Computing Students Society')
 

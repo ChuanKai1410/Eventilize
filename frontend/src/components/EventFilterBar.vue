@@ -1,11 +1,10 @@
 <script setup>
-import { ref, watch } from 'vue'
-import { eventCategories } from '../data/mockEvents.js'
+import { computed, ref, watch } from 'vue'
 import { useEventStore } from '../composables/useEventStore.js'
 
 const emit = defineEmits(['filter'])
 
-const { events } = useEventStore()
+const { events, categories } = useEventStore()
 
 const filters = ref({
   category: '',
@@ -15,8 +14,8 @@ const filters = ref({
   sort: '',
 })
 
-const locations = [...new Set(events.value.map((e) => e.location))].sort()
-const organizers = [...new Set(events.value.map((e) => e.organizer))].sort()
+const locations = computed(() => [...new Set(events.value.map((e) => e.location))].sort())
+const organizers = computed(() => [...new Set(events.value.map((e) => e.organizer))].sort())
 
 watch(filters, () => emit('filter', { ...filters.value }), { deep: true })
 
@@ -41,7 +40,7 @@ defineExpose({ resetFilters })
         <label class="form-label">Category</label>
         <select v-model="filters.category" class="form-select">
           <option value="">All categories</option>
-          <option v-for="cat in eventCategories" :key="cat" :value="cat">{{ cat }}</option>
+          <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
         </select>
       </div>
       <div class="filter-item">

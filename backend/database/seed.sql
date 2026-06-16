@@ -6,6 +6,7 @@ USE eventilize;
 INSERT INTO users (name,email,password_hash,role) VALUES
 ('Student One','student1@utm.my','hash123','student'),
 ('Student Two','student2@utm.my','hash123','student'),
+('Computing Students Society','organizer@utm.my','hash123','organizer'),
 ('Organizer One','organizer1@utm.my','hash123','organizer'),
 ('Organizer Two','organizer2@utm.my','hash123','organizer'),
 ('Admin User','admin@eventilize.com','hash123','admin');
@@ -15,13 +16,16 @@ INSERT INTO users (name,email,password_hash,role) VALUES
 -- =====================
 INSERT INTO categories (category_name) VALUES
 ('Technology'),
+('Tech Talk'),
 ('Academic'),
 ('Sports'),
 ('Cultural'),
 ('Competition'),
 ('Workshop'),
 ('Career'),
-('Faculty');
+('Faculty'),
+('Seminar'),
+('Residential');
 
 -- =====================
 -- EVENTS (8 EVENTS)
@@ -29,21 +33,21 @@ INSERT INTO categories (category_name) VALUES
 INSERT INTO events
 (title,description,category_id,organizer_id,event_date,start_time,end_time,location,map_link,registration_link,event_image,status)
 VALUES
-('UTM Tech Talk 2026','AI and Future Tech talk session',1,3,'2026-06-10','10:00:00','12:00:00','DK1 UTM',NULL,NULL,NULL,'approved'),
+('UTM Tech Talk 2026','AI and Future Tech talk session',2,3,'2026-06-10','10:00:00','12:00:00','DK1 UTM',NULL,NULL,NULL,'approved'),
 
-('Career Fair 2026','Meet top companies hiring UTM students',7,4,'2026-06-15','09:00:00','17:00:00','UTM Arena',NULL,NULL,NULL,'approved'),
+('Career Fair 2026','Meet top companies hiring UTM students',8,4,'2026-06-15','09:00:00','17:00:00','UTM Arena',NULL,NULL,NULL,'approved'),
 
-('Cultural Night','Celebrate multicultural performances',4,3,'2026-06-20','19:00:00','23:00:00','Dewan Sultan',NULL,NULL,NULL,'pending'),
+('Cultural Night','Celebrate multicultural performances',5,3,'2026-06-20','19:00:00','23:00:00','Dewan Sultan',NULL,NULL,NULL,'pending'),
 
-('Sports Tournament','Interfaculty sports competition',3,4,'2026-06-25','08:00:00','18:00:00','Stadium UTM',NULL,NULL,NULL,'approved'),
+('Sports Tournament','Interfaculty sports competition',4,4,'2026-06-25','08:00:00','18:00:00','Stadium UTM',NULL,NULL,NULL,'approved'),
 
-('Research Seminar','Faculty research sharing session',2,3,'2026-07-01','09:00:00','12:00:00','FKE Seminar Room',NULL,NULL,NULL,'pending'),
+('Research Seminar','Faculty research sharing session',10,3,'2026-07-01','09:00:00','12:00:00','FKE Seminar Room',NULL,NULL,NULL,'pending'),
 
-('Hackathon Challenge','24-hour coding challenge',1,4,'2026-07-05','09:00:00','09:00:00','Innovation Lab',NULL,NULL,NULL,'approved'),
+('Hackathon Challenge','24-hour coding challenge',6,4,'2026-07-05','09:00:00','09:00:00','Innovation Lab',NULL,NULL,NULL,'approved'),
 
-('Business Workshop','Entrepreneurship skills workshop',6,3,'2026-07-08','10:00:00','16:00:00','CTF Hall',NULL,NULL,NULL,'rejected'),
+('Business Workshop','Entrepreneurship skills workshop',7,3,'2026-07-08','10:00:00','16:00:00','CTF Hall',NULL,NULL,NULL,'rejected'),
 
-('UTM Gala Night 2026','Formal dinner & awards night',4,4,'2026-07-15','19:00:00','23:00:00','Grand Hall UTM','https://maps.google.com','https://forms.utm.my/gala',NULL,'approved');
+('UTM Gala Night 2026','Formal dinner & awards night',5,4,'2026-07-15','19:00:00','23:00:00','Grand Hall UTM','https://maps.google.com','https://forms.utm.my/gala',NULL,'approved');
 
 -- =====================
 -- BOOKMARKS

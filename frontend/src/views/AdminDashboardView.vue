@@ -1,11 +1,15 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
 import AnalyticsCard from '../components/AnalyticsCard.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { useEventStore } from '../composables/useEventStore.js'
 
-const { events } = useEventStore()
+const { events, fetchEvents } = useEventStore()
+
+onMounted(() => {
+  fetchEvents()
+})
 
 const stats = computed(() => ({
   totalEvents: events.value.length,

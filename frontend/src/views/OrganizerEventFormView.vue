@@ -5,12 +5,11 @@ import ProtectedLayout from '../components/ProtectedLayout.vue'
 import FormInput from '../components/FormInput.vue'
 import { useAuth } from '../composables/useAuth.js'
 import { useEventStore } from '../composables/useEventStore.js'
-import { eventCategories } from '../data/mockEvents.js'
 
 const route = useRoute()
 const router = useRouter()
 const { user } = useAuth()
-const { getEventById, addEvent, updateEvent, categories } = useEventStore()
+const { fetchEvents, getEventById, addEvent, updateEvent, categories } = useEventStore()
 
 const isEdit = computed(() => !!route.params.id)
 const pageTitle = computed(() => (isEdit.value ? 'Update Event' : 'Create Event'))
@@ -37,7 +36,9 @@ const posterPreviews = ref([])
 
 const categoryOptions = computed(() => categories.value)
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchEvents()
+
   if (isEdit.value) {
     const event = getEventById(route.params.id)
     if (event) {
@@ -80,12 +81,12 @@ function validate() {
   return Object.keys(errors.value).length === 0
 }
 
-function submit(status) {
+async function submit(status) {
   successMessage.value = ''
   if (!validate()) return
 
   loading.value = true
-  setTimeout(() => {
+  try {
     const organizerName = user.value?.organizerName || user.value?.name || 'Unknown Organizer'
     const payload = {
       ...form.value,
@@ -94,16 +95,24 @@ function submit(status) {
     }
 
     if (isEdit.value) {
-      updateEvent(route.params.id, payload)
+      await updateEvent(route.params.id, payload)
       successMessage.value = `Event ${status === 'Draft' ? 'saved as draft' : 'updated'} successfully!`
     } else {
-      addEvent(payload)
+      await addEvent(payload)
       successMessage.value = `Event ${status === 'Draft' ? 'saved as draft' : 'submitted for approval'} successfully!`
     }
 
-    loading.value = false
     setTimeout(() => router.push('/organizer/events'), 1500)
-  }, 500)
+  } catch (error) {
+    const apiErrors = error.response?.data?.errors
+    if (apiErrors && typeof apiErrors === 'object') {
+      errors.value = apiErrors
+    } else {
+      errors.value = { form: error.response?.data?.message || 'Failed to save event.' }
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
 function cancel() {
@@ -145,6 +154,7 @@ async function handlePosterUpload(event) {
       </div>
 
       <div v-if="successMessage" class="alert alert-success">{{ successMessage }}</div>
+      <div v-if="errors.form" class="alert alert-error">{{ errors.form }}</div>
 
       <form class="event-form card" @submit.prevent>
         <div class="card-body">

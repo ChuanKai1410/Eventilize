@@ -1,11 +1,15 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { useEventStore } from '../composables/useEventStore.js'
 
-const { events, updateEventStatus } = useEventStore()
+const { events, fetchEvents, updateEventStatus } = useEventStore()
+
+onMounted(() => {
+  fetchEvents()
+})
 
 const pendingEvents = computed(() =>
   events.value.filter((e) => e.status === 'Pending')
@@ -34,7 +38,7 @@ function closeModal() {
   rejectReasonError.value = ''
 }
 
-function confirmAction() {
+async function confirmAction() {
   if (!selectedEvent.value) return
 
   if (modalAction.value === 'reject' && !rejectReason.value.trim()) {
@@ -47,7 +51,7 @@ function confirmAction() {
     rejectReason: modalAction.value === 'reject' ? rejectReason.value.trim() : ''
   }
 
-  updateEventStatus(selectedEvent.value.id, status, extraFields)
+  await updateEventStatus(selectedEvent.value.id, status, extraFields)
 
   successMessage.value =
     modalAction.value === 'approve'

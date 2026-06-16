@@ -38,8 +38,11 @@ CREATE TABLE events (
     location VARCHAR(255) NOT NULL,
     map_link VARCHAR(500),
     registration_link VARCHAR(500),
-    event_image VARCHAR(500),
-    status ENUM('pending','approved','rejected') DEFAULT 'pending',
+    event_image LONGTEXT,
+    poster_images LONGTEXT,
+    status ENUM('draft','pending','approved','rejected') DEFAULT 'pending',
+    reject_reason TEXT,
+    status_updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 

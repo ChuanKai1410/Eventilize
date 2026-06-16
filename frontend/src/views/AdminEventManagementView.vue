@@ -1,11 +1,14 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { useEventStore } from '../composables/useEventStore.js'
-import { eventCategories } from '../data/mockEvents.js'
 
-const { events, updateEventStatus, deleteEvent } = useEventStore()
+const { events, categories, fetchEvents, updateEventStatus, deleteEvent } = useEventStore()
+
+onMounted(() => {
+  fetchEvents()
+})
 
 const statusFilter = ref('')
 const categoryFilter = ref('')
@@ -31,8 +34,8 @@ const filteredEvents = computed(() => {
   return list.sort((a, b) => b.eventDate.localeCompare(a.eventDate))
 })
 
-function approve(event) {
-  updateEventStatus(event.id, 'Approved', { rejectReason: '' })
+async function approve(event) {
+  await updateEventStatus(event.id, 'Approved', { rejectReason: '' })
   successMessage.value = `"${event.title}" approved.`
   clearSuccess()
 }
@@ -51,7 +54,7 @@ function closeRejectModal() {
   rejectReasonError.value = ''
 }
 
-function confirmReject() {
+async function confirmReject() {
   if (!rejectReason.value.trim()) {
     rejectReasonError.value = 'Reject reason is required.'
     return
@@ -59,7 +62,7 @@ function confirmReject() {
 
   if (!eventToReject.value) return
 
-  updateEventStatus(eventToReject.value.id, 'Rejected', { rejectReason: rejectReason.value.trim() })
+  await updateEventStatus(eventToReject.value.id, 'Rejected', { rejectReason: rejectReason.value.trim() })
 
   successMessage.value = `"${eventToReject.value.title}" rejected.`
   closeRejectModal()
@@ -76,9 +79,9 @@ function closeDeleteModal() {
   eventToDelete.value = null
 }
 
-function handleDelete() {
+async function handleDelete() {
   if (eventToDelete.value) {
-    deleteEvent(eventToDelete.value.id)
+    await deleteEvent(eventToDelete.value.id)
     successMessage.value = 'Event deleted.'
     clearSuccess()
   }
@@ -131,7 +134,7 @@ function formatDateTime(dateStr) {
 
         <select v-model="categoryFilter" class="form-select">
           <option value="">All categories</option>
-          <option v-for="cat in eventCategories" :key="cat" :value="cat">
+          <option v-for="cat in categories" :key="cat" :value="cat">
             {{ cat }}
           </option>
         </select>

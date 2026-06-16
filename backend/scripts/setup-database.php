@@ -73,6 +73,59 @@ function hasSeedData(PDO $connection): bool
     return true;
 }
 
+function columnExists(PDO $connection, string $database, string $table, string $column): bool
+{
+    $statement = $connection->prepare(
+        'SELECT COUNT(*)
+         FROM information_schema.columns
+         WHERE table_schema = ?
+         AND table_name = ?
+         AND column_name = ?'
+    );
+    $statement->execute([$database, $table, $column]);
+
+    return (int)$statement->fetchColumn() > 0;
+}
+
+function applySchemaCompatibility(PDO $connection, string $database): void
+{
+    $connection->exec("USE `{$database}`");
+    $connection->exec("ALTER TABLE events MODIFY status ENUM('draft','pending','approved','rejected') DEFAULT 'pending'");
+    $connection->exec('ALTER TABLE events MODIFY event_image LONGTEXT');
+
+    if (!columnExists($connection, $database, 'events', 'poster_images')) {
+        $connection->exec('ALTER TABLE events ADD poster_images LONGTEXT NULL AFTER event_image');
+    }
+
+    if (!columnExists($connection, $database, 'events', 'reject_reason')) {
+        $connection->exec('ALTER TABLE events ADD reject_reason TEXT NULL AFTER status');
+    }
+
+    if (!columnExists($connection, $database, 'events', 'status_updated_at')) {
+        $connection->exec('ALTER TABLE events ADD status_updated_at DATETIME DEFAULT CURRENT_TIMESTAMP AFTER reject_reason');
+    }
+}
+
+function ensureDemoReferenceData(PDO $connection): void
+{
+    $statement = $connection->prepare("SELECT COUNT(*) FROM users WHERE email = ? OR name = ?");
+    $statement->execute(['organizer@utm.my', 'Computing Students Society']);
+
+    if ((int)$statement->fetchColumn() === 0) {
+        $connection->prepare(
+            "INSERT INTO users (name, email, password_hash, role)
+             VALUES ('Computing Students Society', 'organizer@utm.my', 'hash123', 'organizer')"
+        )->execute();
+    }
+
+    $categories = ['Tech Talk', 'Workshop', 'Cultural', 'Sports', 'Career', 'Seminar', 'Residential'];
+    $statement = $connection->prepare('INSERT IGNORE INTO categories (category_name) VALUES (?)');
+
+    foreach ($categories as $category) {
+        $statement->execute([$category]);
+    }
+}
+
 $host = $_ENV['DB_HOST'] ?? 'localhost';
 $port = $_ENV['DB_PORT'] ?? '3306';
 $database = $_ENV['DB_NAME'] ?? 'eventilize';
@@ -102,6 +155,11 @@ try {
         runSqlFile($connection, $rootPath . '/database/schema.sql');
         notifyStatus('Schema creation', true, $database);
     }
+
+    applySchemaCompatibility($connection, $database);
+    notifyStatus('Schema compatibility', true, 'events table supports CRUD fields');
+    ensureDemoReferenceData($connection);
+    notifyStatus('Demo reference data', true, 'organizer and categories available');
 } catch (Throwable $exception) {
     notifyStatus('Schema creation', false, $exception->getMessage());
     exit(1);

@@ -15,6 +15,7 @@ const route = useRoute()
 const router = useRouter()
 
 const {
+  fetchEvents,
   getEventById,
   toggleBookmark,
   incrementViews,
@@ -113,7 +114,8 @@ const formattedDate = computed(() => {
   })
 })
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchEvents()
   if (event.value) incrementViews(event.value.id)
 })
 
@@ -134,10 +136,10 @@ function goToEdit() {
   if (event.value) router.push(`/organizer/events/${event.value.id}/edit`)
 }
 
-function approveEvent() {
+async function approveEvent() {
   if (!event.value) return
 
-  updateEventStatus(event.value.id, 'Approved', { rejectReason: '' })
+  await updateEventStatus(event.value.id, 'Approved', { rejectReason: '' })
 
   successMessage.value = `Event "${event.value.title}" has been approved.`
   clearSuccess()
@@ -155,7 +157,7 @@ function closeRejectModal() {
   rejectReasonError.value = ''
 }
 
-function confirmReject() {
+async function confirmReject() {
   if (!rejectReason.value.trim()) {
     rejectReasonError.value = 'Reject reason is required.'
     return
@@ -163,7 +165,7 @@ function confirmReject() {
 
   if (!event.value) return
 
-  updateEventStatus(event.value.id, 'Rejected', { rejectReason: rejectReason.value.trim() })
+  await updateEventStatus(event.value.id, 'Rejected', { rejectReason: rejectReason.value.trim() })
 
   successMessage.value = `Event "${event.value.title}" has been rejected.`
   closeRejectModal()
