@@ -143,6 +143,17 @@ h1, h2, h3, h4 {
   color: #DC2626;
 }
 
+.btn-success {
+  background: #DCFCE7;
+  color: #15803D;
+  border: 1px solid #BBF7D0;
+}
+
+.btn-success:hover {
+  background: #BBF7D0;
+  color: #166534;
+}
+
 .btn-sm {
   padding: 0.4375rem 0.875rem;
   font-size: 0.8125rem;

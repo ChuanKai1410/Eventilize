@@ -187,7 +187,7 @@ function formatDateTime(dateStr) {
                   <button
                     v-if="event.status === 'Pending'"
                     type="button"
-                    class="btn btn-accent btn-sm"
+                    class="btn btn-success btn-sm"
                     @click="approve(event)"
                   >
                     Approve
@@ -196,7 +196,7 @@ function formatDateTime(dateStr) {
                   <button
                     v-if="event.status === 'Pending'"
                     type="button"
-                    class="btn btn-ghost btn-sm"
+                    class="btn btn-danger btn-sm"
                     @click="openRejectModal(event)"
                   >
                     Reject

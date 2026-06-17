@@ -19,6 +19,8 @@ class BookmarkController extends BaseController
             }
 
             return $this->success($response, 'Event bookmark updated successfully', $event);
+        } catch (\InvalidArgumentException $exception) {
+            return $this->error($response, $exception->getMessage(), null, 422);
         } catch (\Throwable $exception) {
             return $this->error($response, 'Failed to update bookmark', ['server' => $exception->getMessage()], 500);
         }

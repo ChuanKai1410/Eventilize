@@ -64,7 +64,7 @@ const emptyDescription = computed(() =>
       :title="emptyTitle"
       :description="emptyDescription"
       action-label="Discover events"
-      @action="$router.push('/events')"
+      @action="$router.push('/student/events')"
     />
   </div>
 </template>

@@ -73,18 +73,6 @@ export function useRegisteredEvents() {
     return null
   }
 
-  async function unregisterFromEvent(eventId) {
-    const userId = getCurrentUserId()
-    if (!userId) return null
-
-    const response = await api.delete(`/events/${eventId}/registrations`, { data: { userId } })
-    if (response.data?.success) {
-      await fetchRegisteredEvents(true)
-      return response.data.data
-    }
-    return null
-  }
-
   function getEventsOnDate(dateStr) {
     return approvedEvents.value.filter((e) => e.eventDate === dateStr)
   }
@@ -109,7 +97,6 @@ export function useRegisteredEvents() {
     fetchRegisteredEvents,
     isRegistered,
     registerForEvent,
-    unregisterFromEvent,
     getEventsOnDate,
     getDatesWithEvents,
   }

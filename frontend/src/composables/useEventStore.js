@@ -38,7 +38,10 @@ async function fetchEvents(force = false) {
 
   fetchPromise = (async () => {
     try {
-      const response = await api.get('/events')
+      const params = {}
+      const userId = getCurrentUserId()
+      if (userId) params.userId = userId
+      const response = await api.get('/events', { params })
       if (response.data?.success && Array.isArray(response.data.data)) {
         events.value = response.data.data
       }
@@ -69,6 +72,9 @@ export function useEventStore() {
   }
 
   async function toggleBookmark(eventId) {
+    const userId = getCurrentUserId()
+    if (!userId) return null
+
     const event = getEventById(eventId)
     const original = event ? { ...event } : null
 
@@ -79,7 +85,7 @@ export function useEventStore() {
     }
 
     try {
-      const response = await api.post(`/events/${eventId}/bookmark`, { userId: getCurrentUserId() })
+      const response = await api.post(`/events/${eventId}/bookmark`, { userId })
       if (response.data?.success) {
         return upsertEvent(response.data.data)
       }

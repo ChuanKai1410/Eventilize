@@ -62,16 +62,18 @@ class Event
         $statement = $this->db->prepare($sql);
         $statement->execute($params);
 
-        return array_map(fn ($row) => $this->transform($row), $statement->fetchAll());
+        $userIdentifier = $filters['userId'] ?? null;
+
+        return array_map(fn ($row) => $this->transform($row, $userIdentifier), $statement->fetchAll());
     }
 
-    public function find(int $id): ?array
+    public function find(int $id, ?string $userIdentifier = null): ?array
     {
         $statement = $this->db->prepare($this->baseSelect() . ' WHERE e.event_id = ?');
         $statement->execute([$id]);
         $row = $statement->fetch();
 
-        return $row ? $this->transform($row) : null;
+        return $row ? $this->transform($row, $userIdentifier) : null;
     }
 
     public function create(array $payload): array
@@ -277,7 +279,7 @@ class Event
                 LEFT JOIN event_analytics ea ON e.event_id = ea.event_id";
     }
 
-    private function transform(array $row): array
+    private function transform(array $row, ?string $userIdentifier = null): array
     {
         $poster = [];
         if (!empty($row['poster_images'])) {
@@ -306,7 +308,7 @@ class Event
             'statusUpdatedAt' => $row['status_updated_at'] ?? $row['updated_at'],
             'viewsCount' => (int)$row['views_count'],
             'bookmarksCount' => (int)$row['bookmarks_count'],
-            'isBookmarked' => false,
+            'isBookmarked' => $userIdentifier ? $this->isBookmarkedForUser((int)$row['event_id'], $userIdentifier) : false,
             'createdAt' => $row['created_at'],
             'updatedAt' => $row['updated_at'],
         ];
@@ -445,8 +447,7 @@ class Event
             }
         }
 
-        $statement = $this->db->query("SELECT user_id FROM users WHERE role = 'student' ORDER BY user_id LIMIT 1");
-        return (int)$statement->fetchColumn();
+        throw new \InvalidArgumentException('A valid student account is required to bookmark events.');
     }
 
     private function countBookmarks(int $id): int
@@ -455,6 +456,30 @@ class Event
         $statement->execute([$id]);
 
         return (int)$statement->fetchColumn();
+    }
+
+    private function isBookmarkedForUser(int $eventId, string $identifier): bool
+    {
+        if (is_numeric($identifier)) {
+            $statement = $this->db->prepare(
+                'SELECT COUNT(*)
+                 FROM bookmarks
+                 WHERE user_id = ?
+                 AND event_id = ?'
+            );
+            $statement->execute([(int)$identifier, $eventId]);
+        } else {
+            $statement = $this->db->prepare(
+                'SELECT COUNT(*)
+                 FROM bookmarks b
+                 JOIN users u ON b.user_id = u.user_id
+                 WHERE (u.email = ? OR u.name = ?)
+                 AND b.event_id = ?'
+            );
+            $statement->execute([$identifier, $identifier, $eventId]);
+        }
+
+        return (int)$statement->fetchColumn() > 0;
     }
 
     private function normalizeTime(string $time): string

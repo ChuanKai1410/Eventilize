@@ -55,7 +55,7 @@ const recommended = computed(() => getRecommended(null, 3))
       <section class="section">
         <div class="section-title">
           <h2>Recommended for You</h2>
-          <router-link to="/events">View all</router-link>
+          <router-link to="/student/events">View all</router-link>
         </div>
         <div class="events-grid">
           <StudentEventCard

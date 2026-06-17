@@ -29,7 +29,6 @@ const {
   fetchRegisteredEvents,
   isRegistered,
   registerForEvent,
-  unregisterFromEvent,
 } = useRegisteredEvents()
 
 const showSidebar = computed(() => {
@@ -101,6 +100,10 @@ const fallbackBackRoute = computed(() => {
     return '/organizer/events'
   }
 
+  if (isStudent.value) {
+    return '/student/events'
+  }
+
   return '/events'
 })
 
@@ -108,6 +111,8 @@ const showRejectModal = ref(false)
 const rejectReason = ref('')
 const rejectReasonError = ref('')
 const successMessage = ref('')
+const showRegistrationModal = ref(false)
+const registrationModalMessage = ref('')
 
 const formattedDate = computed(() => {
   if (!event.value) return ''
@@ -133,17 +138,16 @@ function handleBookmark() {
 }
 
 async function handleRegistration() {
-  if (!event.value) return
+  if (!event.value || isEventRegistered.value) return
 
-  if (isEventRegistered.value) {
-    await unregisterFromEvent(event.value.id)
-    successMessage.value = `Registration for "${event.value.title}" has been cancelled.`
-  } else {
-    await registerForEvent(event.value.id)
-    successMessage.value = `You have registered for "${event.value.title}".`
-  }
+  await registerForEvent(event.value.id)
+  registrationModalMessage.value = `You have registered for "${event.value.title}".`
+  showRegistrationModal.value = true
+}
 
-  clearSuccess()
+function closeRegistrationModal() {
+  showRegistrationModal.value = false
+  registrationModalMessage.value = ''
 }
 
 function goBack() {
@@ -218,7 +222,7 @@ function clearSuccess() {
         title="Event not found"
         description="The event you're looking for doesn't exist or may have been removed."
         action-label="Browse events"
-        @action="$router.push('/events')"
+        @action="$router.push(isStudent ? '/student/events' : '/events')"
       />
 
       <template v-else>
@@ -361,7 +365,7 @@ function clearSuccess() {
             <div class="detail-actions">
               <template v-if="isAdmin">
                 <template v-if="isPendingEvent">
-                  <button type="button" class="btn btn-accent" @click="approveEvent">
+                  <button type="button" class="btn btn-success" @click="approveEvent">
                     Approve
                   </button>
 
@@ -395,9 +399,10 @@ function clearSuccess() {
                   v-else-if="isStudent"
                   type="button"
                   class="btn btn-primary"
+                  :disabled="isEventRegistered"
                   @click="handleRegistration"
                 >
-                  {{ isEventRegistered ? 'Cancel Registration' : 'Register for Event' }}
+                  {{ isEventRegistered ? 'Registered' : 'Register for Event' }}
                 </button>
 
                 <a
@@ -481,6 +486,20 @@ function clearSuccess() {
 
               <button type="button" class="btn btn-danger" @click="confirmReject">
                 Confirm Reject
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="showRegistrationModal" class="modal-overlay" @click.self="closeRegistrationModal">
+          <div class="modal">
+            <h3>Registration Successful</h3>
+
+            <p>{{ registrationModalMessage }}</p>
+
+            <div class="modal-actions">
+              <button type="button" class="btn btn-primary" @click="closeRegistrationModal">
+                OK
               </button>
             </div>
           </div>

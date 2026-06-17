@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted } from 'vue'
 import StudentProtectedLayout from '../components/student/StudentProtectedLayout.vue'
 import StudentEventCard from '../components/student/StudentEventCard.vue'
 import RegisteredEventsTabs from '../components/student/RegisteredEventsTabs.vue'
@@ -6,8 +7,12 @@ import EmptyState from '../components/EmptyState.vue'
 import { useEventStore } from '../composables/useEventStore.js'
 import { useRegisteredEvents } from '../composables/useRegisteredEvents.js'
 
-const { bookmarkedEvents, toggleBookmark } = useEventStore()
+const { bookmarkedEvents, fetchEvents, toggleBookmark } = useEventStore()
 const { upcomingRegistered, pastRegistered } = useRegisteredEvents()
+
+onMounted(() => {
+  fetchEvents(true)
+})
 </script>
 
 <template>
@@ -35,7 +40,7 @@ const { upcomingRegistered, pastRegistered } = useRegisteredEvents()
           title="No bookmarked events yet"
           description="Browse events and bookmark the ones you're interested in."
           action-label="Discover events"
-          @action="$router.push('/events')"
+          @action="$router.push('/student/events')"
         />
       </section>
 

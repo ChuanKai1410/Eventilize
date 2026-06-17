@@ -33,6 +33,30 @@ const routes = [
     meta: { requiresAuth: true, roles: ['student'] },
   },
   {
+    path: '/student/events',
+    name: 'student-events',
+    component: () => import('../views/EventDiscoveryView.vue'),
+    meta: { requiresAuth: true, roles: ['student'] },
+  },
+  {
+    path: '/student/events/:id',
+    name: 'student-event-detail',
+    component: () => import('../views/EventDetailView.vue'),
+    meta: { requiresAuth: true, roles: ['student'] },
+  },
+  {
+    path: '/student/bookmarks',
+    name: 'student-bookmarks',
+    component: () => import('../views/BookmarkView.vue'),
+    meta: { requiresAuth: true, roles: ['student'] },
+  },
+  {
+    path: '/student/notifications',
+    name: 'student-notifications',
+    component: () => import('../views/NotificationView.vue'),
+    meta: { requiresAuth: true, roles: ['student'] },
+  },
+  {
     path: '/events',
     name: 'events',
     component: () => import('../views/EventDiscoveryView.vue'),
@@ -47,14 +71,12 @@ const routes = [
   {
     path: '/bookmarks',
     name: 'bookmarks',
-    component: () => import('../views/BookmarkView.vue'),
-    meta: { requiresAuth: true, roles: ['student'] },
+    redirect: '/student/bookmarks',
   },
   {
     path: '/notifications',
     name: 'notifications',
-    component: () => import('../views/NotificationView.vue'),
-    meta: { requiresAuth: true, roles: ['student'] },
+    redirect: '/student/notifications',
   },
   {
     path: '/organizer/dashboard',

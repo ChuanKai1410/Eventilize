@@ -60,19 +60,7 @@ function countExistingTables(PDO $connection, string $database): int
 
 function hasSeedData(PDO $connection): bool
 {
-    $checks = [
-        'SELECT COUNT(*) FROM users',
-        'SELECT COUNT(*) FROM categories',
-        'SELECT COUNT(*) FROM events',
-    ];
-
-    foreach ($checks as $sql) {
-        if ((int)$connection->query($sql)->fetchColumn() === 0) {
-            return false;
-        }
-    }
-
-    return true;
+    return (int)$connection->query('SELECT COUNT(*) FROM categories')->fetchColumn() > 0;
 }
 
 function columnExists(PDO $connection, string $database, string $table, string $column): bool
@@ -108,11 +96,9 @@ function applySchemaCompatibility(PDO $connection, string $database): void
     }
 }
 
-function ensureDemoReferenceData(PDO $connection): void
+function ensureReferenceData(PDO $connection): void
 {
-    ensureDemoUser($connection, 'Ahmad Student', 'student@utm.my', 'student123', 'student');
-    ensureDemoUser($connection, 'Computing Students Society', 'organizer@utm.my', 'organizer123', 'organizer');
-    ensureDemoUser($connection, 'Platform Admin', 'admin@utm.my', 'admin1234', 'admin');
+    ensureSuperAdmin($connection);
 
     $categories = ['Tech Talk', 'Workshop', 'Cultural', 'Sports', 'Career', 'Seminar', 'Residential'];
     $statement = $connection->prepare('INSERT IGNORE INTO categories (category_name) VALUES (?)');
@@ -122,67 +108,30 @@ function ensureDemoReferenceData(PDO $connection): void
     }
 }
 
-function ensureDemoUser(PDO $connection, string $name, string $email, string $password, string $role): void
+function ensureSuperAdmin(PDO $connection): void
 {
+    $name = 'Super Admin';
+    $email = 'admin@utm.my';
+    $password = 'admin1234';
     $hash = password_hash($password, PASSWORD_DEFAULT);
+
+    $connection->prepare("UPDATE users SET role = 'student' WHERE role = 'admin' AND email <> ?")
+        ->execute([$email]);
+
     $statement = $connection->prepare('SELECT user_id FROM users WHERE email = ?');
     $statement->execute([$email]);
     $userId = $statement->fetchColumn();
 
     if ($userId) {
-        $connection->prepare('UPDATE users SET name = ?, password_hash = ?, role = ? WHERE user_id = ?')
-            ->execute([$name, $hash, $role, $userId]);
+        $connection->prepare("UPDATE users SET name = ?, password_hash = ?, role = 'admin' WHERE user_id = ?")
+            ->execute([$name, $hash, $userId]);
+        notifyStatus('Super admin account', true, "email={$email} password={$password}");
         return;
     }
 
-    $connection->prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)')
-        ->execute([$name, $email, $hash, $role]);
-}
-
-function ensureDemoRegistrations(PDO $connection): void
-{
-    $studentId = $connection->query("SELECT user_id FROM users WHERE email = 'student@utm.my' LIMIT 1")->fetchColumn();
-
-    if (!$studentId) {
-        return;
-    }
-
-    $eventIds = $connection
-        ->query("SELECT event_id FROM events WHERE status = 'approved' ORDER BY event_date ASC LIMIT 4")
-        ->fetchAll(PDO::FETCH_COLUMN);
-
-    $statement = $connection->prepare(
-        "INSERT INTO event_registrations (user_id, event_id, status, registered_at, cancelled_at)
-         VALUES (?, ?, 'registered', NOW(), NULL)
-         ON DUPLICATE KEY UPDATE status = 'registered', cancelled_at = NULL"
-    );
-
-    foreach ($eventIds as $eventId) {
-        $statement->execute([$studentId, $eventId]);
-    }
-}
-
-function ensureDemoNotifications(PDO $connection): void
-{
-    $studentId = $connection->query("SELECT user_id FROM users WHERE email = 'student@utm.my' LIMIT 1")->fetchColumn();
-
-    if (!$studentId) {
-        return;
-    }
-
-    $connection->prepare('INSERT IGNORE INTO notification_settings (user_id) VALUES (?)')->execute([$studentId]);
-
-    $countStatement = $connection->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ?');
-    $countStatement->execute([$studentId]);
-
-    if ((int)$countStatement->fetchColumn() > 0) {
-        return;
-    }
-
-    $eventId = $connection->query("SELECT event_id FROM events WHERE status = 'approved' ORDER BY event_date ASC LIMIT 1")->fetchColumn();
-    $statement = $connection->prepare('INSERT INTO notifications (user_id, event_id, message, is_read) VALUES (?, ?, ?, ?)');
-    $statement->execute([$studentId, $eventId ?: null, 'Welcome to Eventilize. Your registered events are now synced with the database.', 0]);
-    $statement->execute([$studentId, $eventId ?: null, 'Reminder: Check your upcoming registered events.', 0]);
+    $connection->prepare("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')")
+        ->execute([$name, $email, $hash]);
+    notifyStatus('Super admin account', true, "email={$email} password={$password}");
 }
 
 $host = $_ENV['DB_HOST'] ?? 'localhost';
@@ -219,12 +168,8 @@ try {
     notifyStatus('Schema compatibility', true, 'events table supports CRUD fields');
     applyRegistrationSchemaCompatibility($connection, $database);
     notifyStatus('Registration schema', true, 'student registrations table available');
-    ensureDemoReferenceData($connection);
-    notifyStatus('Demo reference data', true, 'organizer and categories available');
-    ensureDemoRegistrations($connection);
-    notifyStatus('Demo registrations', true, 'student registered events available');
-    ensureDemoNotifications($connection);
-    notifyStatus('Demo notifications', true, 'student notifications available');
+    ensureReferenceData($connection);
+    notifyStatus('Reference data', true, 'super admin and categories available');
 } catch (Throwable $exception) {
     notifyStatus('Schema creation', false, $exception->getMessage());
     exit(1);

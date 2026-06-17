@@ -23,7 +23,8 @@ class EventController extends BaseController
 
     public function show(Request $request, Response $response, array $args): Response
     {
-        $event = $this->events->find((int)$args['id']);
+        $query = $request->getQueryParams();
+        $event = $this->events->find((int)$args['id'], isset($query['userId']) ? (string)$query['userId'] : null);
 
         if (!$event) {
             return $this->error($response, 'Event not found', null, 404);

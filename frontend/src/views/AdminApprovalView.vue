@@ -113,7 +113,7 @@ async function confirmAction() {
 
                   <button
                     type="button"
-                    class="btn btn-accent btn-sm"
+                    class="btn btn-success btn-sm"
                     @click="openModal(event, 'approve')"
                   >
                     Approve
@@ -170,7 +170,7 @@ async function confirmAction() {
 
             <button
               type="button"
-              :class="modalAction === 'approve' ? 'btn btn-accent' : 'btn btn-danger'"
+              :class="modalAction === 'approve' ? 'btn btn-success' : 'btn btn-danger'"
               @click="confirmAction"
             >
               {{ modalAction === 'approve' ? 'Approve' : 'Confirm Reject' }}
