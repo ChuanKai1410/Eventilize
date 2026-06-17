@@ -55,8 +55,16 @@ async function updateNotificationSettings(settings) {
   const userId = getCurrentUserId()
   if (!userId) return settings
 
-  const response = await api.put(`/users/${encodeURIComponent(userId)}/notification-settings`, settings)
-  return response.data?.data || settings
+  try {
+    const response = await api.put(`/users/${encodeURIComponent(userId)}/notification-settings`, settings)
+    if (response.data?.success && response.data?.data && typeof response.data.data === 'object') {
+      return response.data.data
+    }
+    return settings
+  } catch (error) {
+    console.error('Failed to update notification settings:', error)
+    return settings
+  }
 }
 
 export function useNotifications() {
