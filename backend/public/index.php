@@ -72,7 +72,8 @@ $errorMiddleware->setDefaultErrorHandler(
             $statusCode = 500;
         }
 
-        return ResponseHelper::error($response, $exception->getMessage(), null, $statusCode);
+        $message = $displayErrorDetails ? $exception->getMessage() : 'Internal server error';
+        return ResponseHelper::error($response, $message, null, $statusCode);
     }
 );
 
