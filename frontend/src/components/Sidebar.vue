@@ -8,9 +8,9 @@ const route = useRoute()
 
 const studentLinks = [
   { to: '/student/dashboard', label: 'Dashboard', icon: 'home' },
-  { to: '/events', label: 'Discover Events', icon: 'search' },
-  { to: '/bookmarks', label: 'Bookmarks', icon: 'bookmark' },
-  { to: '/notifications', label: 'Notifications', icon: 'bell' },
+  { to: '/student/events', label: 'Discover Events', icon: 'search' },
+  { to: '/student/bookmarks', label: 'Bookmarks', icon: 'bookmark' },
+  { to: '/student/notifications', label: 'Notifications', icon: 'bell' },
 ]
 
 const organizerLinks = [
@@ -53,6 +53,7 @@ function isActive(path) {
     return path === '/admin/events'
   }
 
+  if (path === '/student/events') return route.path === '/student/events' || route.path.startsWith('/student/events/')
   if (path === '/events') return route.path === '/events'
 
   if (path === '/organizer/events') {

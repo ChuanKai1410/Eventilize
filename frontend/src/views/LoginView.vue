@@ -26,21 +26,19 @@ function validate() {
   return Object.keys(errors.value).length === 0
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   apiError.value = ''
   if (!validate()) return
 
   loading.value = true
-  setTimeout(() => {
-    const result = login(email.value.trim(), password.value)
-    loading.value = false
-    if (result.success) {
-      const redirect = router.currentRoute.value.query.redirect
-      router.push(typeof redirect === 'string' ? redirect : getDashboardRoute())
-    } else {
-      apiError.value = result.message
-    }
-  }, 400)
+  const result = await login(email.value.trim(), password.value)
+  loading.value = false
+  if (result.success) {
+    const redirect = router.currentRoute.value.query.redirect
+    router.push(typeof redirect === 'string' ? redirect : getDashboardRoute())
+  } else {
+    apiError.value = result.message
+  }
 }
 </script>
 

@@ -1,11 +1,14 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import { useEventStore } from '../composables/useEventStore.js'
-import { eventCategories } from '../data/mockEvents.js'
 
-const { events, updateEventStatus, deleteEvent } = useEventStore()
+const { events, categories, fetchEvents, deleteEvent } = useEventStore()
+
+onMounted(() => {
+  fetchEvents()
+})
 
 const statusFilter = ref('')
 const categoryFilter = ref('')
@@ -13,11 +16,6 @@ const organizerFilter = ref('')
 const showDeleteModal = ref(false)
 const eventToDelete = ref(null)
 const successMessage = ref('')
-
-const showRejectModal = ref(false)
-const eventToReject = ref(null)
-const rejectReason = ref('')
-const rejectReasonError = ref('')
 
 const organizers = computed(() => [...new Set(events.value.map((e) => e.organizer))].sort())
 
@@ -31,41 +29,6 @@ const filteredEvents = computed(() => {
   return list.sort((a, b) => b.eventDate.localeCompare(a.eventDate))
 })
 
-function approve(event) {
-  updateEventStatus(event.id, 'Approved', { rejectReason: '' })
-  successMessage.value = `"${event.title}" approved.`
-  clearSuccess()
-}
-
-function openRejectModal(event) {
-  eventToReject.value = event
-  rejectReason.value = ''
-  rejectReasonError.value = ''
-  showRejectModal.value = true
-}
-
-function closeRejectModal() {
-  showRejectModal.value = false
-  eventToReject.value = null
-  rejectReason.value = ''
-  rejectReasonError.value = ''
-}
-
-function confirmReject() {
-  if (!rejectReason.value.trim()) {
-    rejectReasonError.value = 'Reject reason is required.'
-    return
-  }
-
-  if (!eventToReject.value) return
-
-  updateEventStatus(eventToReject.value.id, 'Rejected', { rejectReason: rejectReason.value.trim() })
-
-  successMessage.value = `"${eventToReject.value.title}" rejected.`
-  closeRejectModal()
-  clearSuccess()
-}
-
 function confirmDelete(event) {
   eventToDelete.value = event
   showDeleteModal.value = true
@@ -76,9 +39,9 @@ function closeDeleteModal() {
   eventToDelete.value = null
 }
 
-function handleDelete() {
+async function handleDelete() {
   if (eventToDelete.value) {
-    deleteEvent(eventToDelete.value.id)
+    await deleteEvent(eventToDelete.value.id)
     successMessage.value = 'Event deleted.'
     clearSuccess()
   }
@@ -131,7 +94,7 @@ function formatDateTime(dateStr) {
 
         <select v-model="categoryFilter" class="form-select">
           <option value="">All categories</option>
-          <option v-for="cat in eventCategories" :key="cat" :value="cat">
+          <option v-for="cat in categories" :key="cat" :value="cat">
             {{ cat }}
           </option>
         </select>
@@ -182,24 +145,6 @@ function formatDateTime(dateStr) {
                   </router-link>
 
                   <button
-                    v-if="event.status === 'Pending'"
-                    type="button"
-                    class="btn btn-accent btn-sm"
-                    @click="approve(event)"
-                  >
-                    Approve
-                  </button>
-
-                  <button
-                    v-if="event.status === 'Pending'"
-                    type="button"
-                    class="btn btn-ghost btn-sm"
-                    @click="openRejectModal(event)"
-                  >
-                    Reject
-                  </button>
-
-                  <button
                     type="button"
                     class="btn btn-danger btn-sm"
                     @click="confirmDelete(event)"
@@ -211,37 +156,6 @@ function formatDateTime(dateStr) {
             </tr>
           </tbody>
         </table>
-      </div>
-
-      <div v-if="showRejectModal" class="modal-overlay" @click.self="closeRejectModal">
-        <div class="modal">
-          <h3>Reject Event</h3>
-
-          <p>
-            Please provide a reason before rejecting "{{ eventToReject?.title }}".
-          </p>
-
-          <textarea
-            v-model="rejectReason"
-            class="form-input reject-textarea"
-            rows="4"
-            placeholder="Enter reject reason"
-          />
-
-          <p v-if="rejectReasonError" class="form-error">
-            {{ rejectReasonError }}
-          </p>
-
-          <div class="modal-actions">
-            <button type="button" class="btn btn-ghost" @click="closeRejectModal">
-              Cancel
-            </button>
-
-            <button type="button" class="btn btn-danger" @click="confirmReject">
-              Confirm Reject
-            </button>
-          </div>
-        </div>
       </div>
 
       <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
@@ -279,16 +193,4 @@ function formatDateTime(dateStr) {
   max-width: 200px;
 }
 
-.reject-textarea {
-  width: 100%;
-  resize: vertical;
-  min-height: 110px;
-  margin-top: 1rem;
-}
-
-.form-error {
-  color: var(--color-danger);
-  font-size: 0.875rem;
-  margin-top: 0.5rem;
-}
 </style>

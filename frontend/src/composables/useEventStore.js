@@ -1,26 +1,68 @@
 import { ref, computed } from 'vue'
-import { mockEvents, eventCategories } from '../data/mockEvents.js'
+import api from '../services/api.js'
+import { useAuth } from './useAuth.js'
 
-const events = ref(initializeEvents())
-const categories = ref([...eventCategories])
+const events = ref([])
+const categories = ref([])
 
-function initializeEvents() {
-  try {
-    const stored = localStorage.getItem('eventilize_events')
-    if (stored) return JSON.parse(stored)
-  } catch {
-    /* ignore */
+let fetchPromise = null
+
+function getCurrentUserId() {
+  const { user } = useAuth()
+  return user.value?.email || user.value?.name || null
+}
+
+function upsertEvent(event) {
+  const index = events.value.findIndex((e) => e.id === Number(event.id))
+  if (index === -1) {
+    events.value.push(event)
+  } else {
+    events.value[index] = {
+      ...events.value[index],
+      ...event,
+      isBookmarked: event.isBookmarked ?? events.value[index].isBookmarked,
+    }
   }
-  return JSON.parse(JSON.stringify(mockEvents))
+  return event
 }
 
-function persistEvents() {
-  localStorage.setItem('eventilize_events', JSON.stringify(events.value))
+async function fetchCategories() {
+  try {
+    const response = await api.get('/categories')
+    if (response.data?.success && Array.isArray(response.data.data)) {
+      categories.value = response.data.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch categories:', error)
+  }
 }
 
-function simulateDelay(ms = 600) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+async function fetchEvents(force = false) {
+  if (fetchPromise && !force) return fetchPromise
+
+  fetchPromise = (async () => {
+    try {
+      const params = {}
+      const userId = getCurrentUserId()
+      if (userId) params.userId = userId
+      const response = await api.get('/events', { params })
+      if (response.data?.success && Array.isArray(response.data.data)) {
+        events.value = response.data.data
+      }
+      return [...events.value]
+    } catch (error) {
+      console.error('Failed to fetch events:', error)
+      return [...events.value]
+    } finally {
+      fetchPromise = null
+    }
+  })()
+
+  return fetchPromise
 }
+
+fetchCategories()
+fetchEvents()
 
 export function useEventStore() {
   const bookmarkedEvents = computed(() =>
@@ -29,72 +71,87 @@ export function useEventStore() {
 
   const approvedEvents = computed(() => events.value.filter((e) => e.status === 'Approved'))
 
-  async function fetchEvents() {
-    await simulateDelay(800)
-    return [...events.value]
-  }
-
   function getEventById(id) {
     return events.value.find((e) => e.id === Number(id))
   }
 
-  function toggleBookmark(eventId) {
-    const event = events.value.find((e) => e.id === eventId)
-    if (!event) return
-    event.isBookmarked = !event.isBookmarked
-    event.bookmarksCount += event.isBookmarked ? 1 : -1
-    if (event.bookmarksCount < 0) event.bookmarksCount = 0
-    persistEvents()
+  async function toggleBookmark(eventId) {
+    const userId = getCurrentUserId()
+    if (!userId) return null
+
+    const event = getEventById(eventId)
+    const original = event ? { ...event } : null
+
+    if (event) {
+      event.isBookmarked = !event.isBookmarked
+      event.bookmarksCount += event.isBookmarked ? 1 : -1
+      if (event.bookmarksCount < 0) event.bookmarksCount = 0
+    }
+
+    try {
+      const response = await api.post(`/events/${eventId}/bookmark`, { userId })
+      if (response.data?.success) {
+        return upsertEvent(response.data.data)
+      }
+    } catch (error) {
+      console.error('Failed to toggle bookmark:', error)
+      if (original) upsertEvent(original)
+    }
+    return null
   }
 
-  function incrementViews(eventId) {
-    const event = events.value.find((e) => e.id === eventId)
-    if (event) {
-      event.viewsCount += 1
-      persistEvents()
+  async function incrementViews(eventId) {
+    try {
+      const response = await api.post(`/events/${eventId}/views`)
+      if (response.data?.success) {
+        const current = getEventById(eventId)
+        return upsertEvent({
+          ...response.data.data,
+          isBookmarked: current?.isBookmarked ?? response.data.data.isBookmarked,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to increment views:', error)
     }
+    return null
   }
 
   function getOrganizerEvents(organizerName) {
     return events.value.filter((e) => e.organizer === organizerName)
   }
 
-  function addEvent(eventData) {
-    const newId = Math.max(0, ...events.value.map((e) => e.id)) + 1
-    const newEvent = {
-      id: newId,
-      viewsCount: 0,
-      bookmarksCount: 0,
-      isBookmarked: false,
-      ...eventData,
+  async function addEvent(eventData) {
+    const response = await api.post('/events', eventData)
+    if (response.data?.success) {
+      return upsertEvent(response.data.data)
     }
-    events.value.push(newEvent)
-    persistEvents()
-    return newEvent
+    return null
   }
 
-  function updateEvent(id, eventData) {
-    const index = events.value.findIndex((e) => e.id === Number(id))
-    if (index === -1) return null
-    events.value[index] = { ...events.value[index], ...eventData }
-    persistEvents()
-    return events.value[index]
+  async function updateEvent(id, eventData) {
+    const response = await api.put(`/events/${id}`, eventData)
+    if (response.data?.success) {
+      return upsertEvent(response.data.data)
+    }
+    return null
   }
 
-  function deleteEvent(id) {
-    const index = events.value.findIndex((e) => e.id === Number(id))
-    if (index === -1) return false
-    events.value.splice(index, 1)
-    persistEvents()
-    return true
+  async function deleteEvent(id) {
+    const response = await api.delete(`/events/${id}`)
+    if (response.data?.success) {
+      const index = events.value.findIndex((e) => e.id === Number(id))
+      if (index !== -1) events.value.splice(index, 1)
+      return true
+    }
+    return false
   }
 
-  function updateEventStatus(id, status, extraFields = {}) {
-    return updateEvent(id, {
-      status,
-      statusUpdatedAt: new Date().toISOString(),
-      ...extraFields
-    })
+  async function updateEventStatus(id, status, extraFields = {}) {
+    const response = await api.patch(`/events/${id}/status`, { status, ...extraFields })
+    if (response.data?.success) {
+      return upsertEvent(response.data.data)
+    }
+    return null
   }
 
   function getRecommended(excludeId = null, limit = 3) {
@@ -116,6 +173,7 @@ export function useEventStore() {
     bookmarkedEvents,
     approvedEvents,
     fetchEvents,
+    fetchCategories,
     getEventById,
     toggleBookmark,
     incrementViews,

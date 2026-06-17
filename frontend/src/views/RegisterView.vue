@@ -34,25 +34,24 @@ function validate() {
   return Object.keys(errors.value).length === 0
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   apiError.value = ''
   if (!validate()) return
 
   loading.value = true
-  setTimeout(() => {
-    const result = register({
-      name: name.value.trim(),
-      email: email.value.trim(),
-      password: password.value,
-      role: role.value,
-    })
-    loading.value = false
-    if (result.success) {
-      router.push(getDashboardRoute())
-    } else {
-      apiError.value = result.message
-    }
-  }, 400)
+  const result = await register({
+    name: name.value.trim(),
+    email: email.value.trim(),
+    password: password.value,
+    role: role.value,
+  })
+  loading.value = false
+  if (result.success) {
+    router.push(getDashboardRoute())
+  } else {
+    apiError.value = result.message
+    if (result.errors) errors.value = { ...errors.value, ...result.errors }
+  }
 }
 </script>
 

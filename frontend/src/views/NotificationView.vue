@@ -5,7 +5,13 @@ import NotificationItem from '../components/NotificationItem.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { useNotifications } from '../composables/useNotifications.js'
 
-const { notifications, markAsRead, markAllAsRead } = useNotifications()
+const {
+  notifications,
+  markAsRead,
+  markAllAsRead,
+  fetchNotificationSettings,
+  updateNotificationSettings,
+} = useNotifications()
 
 const filter = ref('all')
 
@@ -15,19 +21,15 @@ const notificationSettings = ref({
   registrationDeadline: false,
 })
 
-onMounted(() => {
-  try {
-    const stored = localStorage.getItem('eventilize_notif_settings')
-    if (stored) {
-      notificationSettings.value = { ...notificationSettings.value, ...JSON.parse(stored) }
-    }
-  } catch {
-    /* ignore */
+onMounted(async () => {
+  notificationSettings.value = {
+    ...notificationSettings.value,
+    ...(await fetchNotificationSettings()),
   }
 })
 
-function saveSettings() {
-  localStorage.setItem('eventilize_notif_settings', JSON.stringify(notificationSettings.value))
+async function saveSettings() {
+  notificationSettings.value = await updateNotificationSettings(notificationSettings.value)
 }
 
 function toggleSetting(key) {

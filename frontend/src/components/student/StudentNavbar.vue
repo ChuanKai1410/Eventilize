@@ -32,9 +32,9 @@ function handleLogout() {
 
 function handleSearch() {
   if (searchQuery.value.trim()) {
-    router.push({ path: '/events', query: { q: searchQuery.value.trim() } })
+    router.push({ path: '/student/events', query: { q: searchQuery.value.trim() } })
   } else {
-    router.push('/events')
+    router.push('/student/events')
   }
 }
 
@@ -80,7 +80,7 @@ function goToProfile() {
       </div>
 
       <nav v-if="isAuthenticated" class="navbar-links">
-        <router-link to="/notifications" class="notif-bell" aria-label="Notifications">
+        <router-link to="/student/notifications" class="notif-bell" aria-label="Notifications">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 10-12 0v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>

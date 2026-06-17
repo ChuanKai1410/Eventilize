@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
 import StatusBadge from '../components/StatusBadge.vue'
 import EmptyState from '../components/EmptyState.vue'
@@ -7,7 +7,11 @@ import { useAuth } from '../composables/useAuth.js'
 import { useEventStore } from '../composables/useEventStore.js'
 
 const { user } = useAuth()
-const { events, deleteEvent } = useEventStore()
+const { events, fetchEvents, deleteEvent } = useEventStore()
+
+onMounted(() => {
+  fetchEvents()
+})
 
 const statusFilter = ref('')
 const showDeleteModal = ref(false)
@@ -28,9 +32,9 @@ function confirmDelete(event) {
   showDeleteModal.value = true
 }
 
-function handleDelete() {
+async function handleDelete() {
   if (eventToDelete.value) {
-    deleteEvent(eventToDelete.value.id)
+    await deleteEvent(eventToDelete.value.id)
   }
   showDeleteModal.value = false
   eventToDelete.value = null

@@ -57,7 +57,7 @@ const thumbnailStyle = computed(() => {
 
 function goToDetails() {
   emit('view-details', props.event.id)
-  router.push(`/events/${props.event.id}`)
+  router.push(`/student/events/${props.event.id}`)
 }
 
 function toggleBookmark() {

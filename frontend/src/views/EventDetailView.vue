@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
 import StudentProtectedLayout from '../components/student/StudentProtectedLayout.vue'
@@ -10,11 +10,13 @@ import BookmarkIcon from '../components/student/BookmarkIcon.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { useEventStore } from '../composables/useEventStore.js'
 import { useAuth } from '../composables/useAuth.js'
+import { useRegisteredEvents } from '../composables/useRegisteredEvents.js'
 
 const route = useRoute()
 const router = useRouter()
 
 const {
+  fetchEvents,
   getEventById,
   toggleBookmark,
   incrementViews,
@@ -23,6 +25,11 @@ const {
 } = useEventStore()
 
 const { isAuthenticated, user } = useAuth()
+const {
+  fetchRegisteredEvents,
+  fetchRegistrationStatus,
+  registerForEvent,
+} = useRegisteredEvents()
 
 const showSidebar = computed(() => {
   if (!isAuthenticated.value) return false
@@ -35,6 +42,8 @@ const isAdmin = computed(() => user.value?.role === 'admin')
 const isStudent = computed(() => user.value?.role === 'student')
 const isOrganizer = computed(() => user.value?.role === 'organizer')
 const isPendingEvent = computed(() => event.value?.status === 'Pending')
+const registrationStatus = ref(false)
+const isEventRegistered = computed(() => registrationStatus.value)
 const isOrganizerEvent = computed(() => {
   if (!event.value || !user.value) return false
   const organizerName = user.value.organizerName || user.value.name
@@ -92,6 +101,10 @@ const fallbackBackRoute = computed(() => {
     return '/organizer/events'
   }
 
+  if (isStudent.value) {
+    return '/student/events'
+  }
+
   return '/events'
 })
 
@@ -99,6 +112,10 @@ const showRejectModal = ref(false)
 const rejectReason = ref('')
 const rejectReasonError = ref('')
 const successMessage = ref('')
+const showRegistrationModal = ref(false)
+const registrationModalTitle = ref('')
+const registrationModalMessage = ref('')
+let detailLoadToken = 0
 
 const formattedDate = computed(() => {
   if (!event.value) return ''
@@ -113,12 +130,70 @@ const formattedDate = computed(() => {
   })
 })
 
-onMounted(() => {
-  if (event.value) incrementViews(event.value.id)
-})
+async function loadEventDetail(eventId) {
+  const token = ++detailLoadToken
+  registrationStatus.value = false
+  closeRegistrationModal()
+
+  await fetchEvents(true)
+  await fetchRegisteredEvents(true)
+
+  if (token !== detailLoadToken) return
+
+  if (event.value) {
+    if (isStudent.value) {
+      const currentStatus = await fetchRegistrationStatus(event.value.id)
+      if (token !== detailLoadToken) return
+      registrationStatus.value = currentStatus
+    }
+    await incrementViews(event.value.id)
+  }
+}
+
+watch(
+  () => route.params.id,
+  (eventId) => {
+    if (eventId) {
+      loadEventDetail(eventId)
+    }
+  },
+  { immediate: true }
+)
 
 function handleBookmark() {
   if (event.value) toggleBookmark(event.value.id)
+}
+
+async function handleRegistration() {
+  if (!event.value || isEventRegistered.value) return
+
+  try {
+    const registeredEvent = await registerForEvent(event.value.id)
+
+    if (!registeredEvent) {
+      throw new Error('Registration failed.')
+    }
+
+    registrationModalTitle.value = 'Registration Successful'
+    registrationModalMessage.value = `You have registered for "${event.value.title}".`
+    registrationStatus.value = true
+    showRegistrationModal.value = true
+  } catch (error) {
+    registrationModalTitle.value = 'Registration Failed'
+    registrationModalMessage.value =
+      error.response?.data?.errors?.event ||
+      error.response?.data?.errors?.user ||
+      error.response?.data?.message ||
+      error.message ||
+      'Unable to register for this event.'
+    showRegistrationModal.value = true
+  }
+}
+
+function closeRegistrationModal() {
+  showRegistrationModal.value = false
+  registrationModalTitle.value = ''
+  registrationModalMessage.value = ''
 }
 
 function goBack() {
@@ -134,10 +209,10 @@ function goToEdit() {
   if (event.value) router.push(`/organizer/events/${event.value.id}/edit`)
 }
 
-function approveEvent() {
+async function approveEvent() {
   if (!event.value) return
 
-  updateEventStatus(event.value.id, 'Approved', { rejectReason: '' })
+  await updateEventStatus(event.value.id, 'Approved', { rejectReason: '' })
 
   successMessage.value = `Event "${event.value.title}" has been approved.`
   clearSuccess()
@@ -155,7 +230,7 @@ function closeRejectModal() {
   rejectReasonError.value = ''
 }
 
-function confirmReject() {
+async function confirmReject() {
   if (!rejectReason.value.trim()) {
     rejectReasonError.value = 'Reject reason is required.'
     return
@@ -163,7 +238,7 @@ function confirmReject() {
 
   if (!event.value) return
 
-  updateEventStatus(event.value.id, 'Rejected', { rejectReason: rejectReason.value.trim() })
+  await updateEventStatus(event.value.id, 'Rejected', { rejectReason: rejectReason.value.trim() })
 
   successMessage.value = `Event "${event.value.title}" has been rejected.`
   closeRejectModal()
@@ -193,7 +268,7 @@ function clearSuccess() {
         title="Event not found"
         description="The event you're looking for doesn't exist or may have been removed."
         action-label="Browse events"
-        @action="$router.push('/events')"
+        @action="$router.push(isStudent ? '/student/events' : '/events')"
       />
 
       <template v-else>
@@ -336,7 +411,7 @@ function clearSuccess() {
             <div class="detail-actions">
               <template v-if="isAdmin">
                 <template v-if="isPendingEvent">
-                  <button type="button" class="btn btn-accent" @click="approveEvent">
+                  <button type="button" class="btn btn-success" @click="approveEvent">
                     Approve
                   </button>
 
@@ -366,6 +441,16 @@ function clearSuccess() {
                   Edit Event
                 </button>
 
+                <button
+                  v-else-if="isStudent"
+                  type="button"
+                  class="btn btn-primary"
+                  :disabled="isEventRegistered"
+                  @click="handleRegistration"
+                >
+                  {{ isEventRegistered ? 'Registered' : 'Register for Event' }}
+                </button>
+
                 <a
                   v-else-if="event.registrationLink"
                   :href="event.registrationLink"
@@ -373,7 +458,7 @@ function clearSuccess() {
                   rel="noopener noreferrer"
                   class="btn btn-primary"
                 >
-                  Register for Event
+                  Open Registration Link
                 </a>
 
                 <BookmarkIcon
@@ -447,6 +532,20 @@ function clearSuccess() {
 
               <button type="button" class="btn btn-danger" @click="confirmReject">
                 Confirm Reject
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="showRegistrationModal" class="modal-overlay" @click.self="closeRegistrationModal">
+          <div class="modal">
+            <h3>{{ registrationModalTitle }}</h3>
+
+            <p>{{ registrationModalMessage }}</p>
+
+            <div class="modal-actions">
+              <button type="button" class="btn btn-primary" @click="closeRegistrationModal">
+                OK
               </button>
             </div>
           </div>
