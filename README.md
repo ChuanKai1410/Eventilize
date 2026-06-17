@@ -41,6 +41,7 @@ Allow administrators to review, approve and manage event submissions to ensure p
 - Event Discovery
 - Search and Filtering
 - Event Bookmarking
+- Event Registration
 - Event Notifications
 - Event Recommendations
 - Event Calendar
@@ -49,6 +50,7 @@ Allow administrators to review, approve and manage event submissions to ensure p
 ### Organizer Features
 - Event Creation
 - Event Management
+- Event Update and Delete
 - Event Analytics
 - Event Poster Upload
 - Organizer Profile
@@ -59,6 +61,31 @@ Allow administrators to review, approve and manage event submissions to ensure p
 - Category Management
 - Notification Management
 - Admin Profile
+
+---
+
+## Current Development Progress
+
+### Completed
+- Database schema for users, categories, events, bookmarks, registrations, notifications, notification settings and analytics.
+- Backend setup script with database connection status, schema compatibility checks and repeatable sample data seeding.
+- REST API foundation using PHP Slim controllers, models, routes and middleware.
+- Event CRUD API:
+  - `GET /api/events`
+  - `GET /api/events/{id}`
+  - `POST /api/events`
+  - `PUT /api/events/{id}`
+  - `DELETE /api/events/{id}`
+  - `PATCH /api/events/{id}/status`
+- Frontend event data is retrieved from the backend instead of static hardcoded event lists.
+- Organizer event creation/editing/deletion is connected to backend APIs.
+- Admin approval/rejection flow is connected to backend APIs.
+- Student bookmark and registration flows are connected to backend APIs.
+- Seeded demo accounts and sample data are available for testing.
+
+### In Progress / Next
+- JWT protected access and stricter role-based API authorization.
+- Additional production hardening for file uploads and deployment configuration.
 
 ---
 
@@ -76,10 +103,12 @@ Allow administrators to review, approve and manage event submissions to ensure p
 - PHP Slim Framework
 - RESTful API
 - JSON Web Token (JWT)
+- PDO
 
 ### Database
 - MySQL
-- PDO
+- `schema.sql`
+- `seed.sql`
 
 ### Development Tools
 - Git
@@ -179,6 +208,8 @@ Backend API will run on:
 http://localhost:8000
 ```
 
+When the backend starts and receives its first request, it also runs the startup database setup once for that backend process and prints setup status to the terminal/error log.
+
 ---
 
 ### Demo Accounts
@@ -190,6 +221,73 @@ The seed step creates these demo accounts:
 | Student | student@utm.my | student123 |
 | Organizer | organizer@utm.my | organizer123 |
 | Admin | admin@utm.my | admin1234 |
+
+---
+
+### Main REST API Endpoints
+
+#### Auth
+```text
+POST /api/auth/register
+POST /api/auth/login
+```
+
+#### Events
+```text
+GET    /api/events
+GET    /api/events/{id}
+POST   /api/events
+PUT    /api/events/{id}
+DELETE /api/events/{id}
+PATCH  /api/events/{id}/status
+POST   /api/events/{id}/views
+POST   /api/events/{id}/bookmark
+```
+
+#### Registrations
+```text
+GET  /api/users/{userId}/registrations
+GET  /api/users/{userId}/registrations/{eventId}
+POST /api/events/{eventId}/registrations
+```
+
+#### Notifications
+```text
+GET   /api/users/{userId}/notifications
+PATCH /api/notifications/{id}/read
+PATCH /api/users/{userId}/notifications/read-all
+GET   /api/users/{userId}/notification-settings
+PUT   /api/users/{userId}/notification-settings
+```
+
+#### Dashboard / Reference Data
+```text
+GET /api/admin/dashboard
+GET /api/categories
+GET /api/health
+GET /api/test-db
+```
+
+---
+
+## Demo Flow
+
+### Student
+1. Login with `student@utm.my / student123`.
+2. Browse events from `/student/events`.
+3. Bookmark an event and confirm it appears in `/student/bookmarks`.
+4. Register for an approved event and confirm the button changes to `Registered`.
+
+### Organizer
+1. Login with `organizer@utm.my / organizer123`.
+2. Create an event from `/organizer/events/create`.
+3. View, edit or delete organizer-owned events from `/organizer/events`.
+
+### Admin
+1. Login with `admin@utm.my / admin1234`.
+2. Review pending events from `/admin/approvals`.
+3. Approve or reject events with a rejection reason.
+4. Manage all events from `/admin/events`.
 
 ---
 
