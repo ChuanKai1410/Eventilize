@@ -9,7 +9,7 @@ import { useEventStore } from '../composables/useEventStore.js'
 const route = useRoute()
 const router = useRouter()
 const { user } = useAuth()
-const { fetchEvents, getEventById, addEvent, updateEvent, categories } = useEventStore()
+const { fetchEvents, fetchCategories, getEventById, addEvent, updateEvent, categories } = useEventStore()
 
 const isEdit = computed(() => !!route.params.id)
 const pageTitle = computed(() => (isEdit.value ? 'Update Event' : 'Create Event'))
@@ -33,10 +33,12 @@ const successMessage = ref('')
 const loading = ref(false)
 const eventImagePreview = ref('')
 const posterPreviews = ref([])
+const MAX_POSTERS = 4
 
 const categoryOptions = computed(() => categories.value)
 
 onMounted(async () => {
+  await fetchCategories()
   await fetchEvents()
 
   if (isEdit.value) {
@@ -90,6 +92,8 @@ async function submit(status) {
     const organizerName = user.value?.organizerName || user.value?.name || 'Unknown Organizer'
     const payload = {
       ...form.value,
+      organizerId: user.value?.id,
+      organizerEmail: user.value?.email,
       organizer: organizerName,
       status,
     }
@@ -119,29 +123,57 @@ function cancel() {
   router.back()
 }
 
-function readFileAsDataUrl(file) {
+function resizeImage(file, maxWidth = 1200, quality = 0.78) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result)
-    reader.onerror = reject
-    reader.readAsDataURL(file)
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(objectUrl)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl)
+      reject(new Error('Unable to process image.'))
+    }
+
+    img.src = objectUrl
   })
 }
 
 async function handleEventImage(event) {
   const file = event.target.files[0]
   if(file) {
-    const dataUrl = await readFileAsDataUrl(file)
-    form.value.eventImage = dataUrl
-    eventImagePreview.value = dataUrl
+    try {
+      const dataUrl = await resizeImage(file, 1200, 0.78)
+      form.value.eventImage = dataUrl
+      eventImagePreview.value = dataUrl
+      errors.value.eventImage = ''
+    } catch (error) {
+      errors.value.eventImage = error.message
+    }
   }
 }
 
 async function handlePosterUpload(event) {
-  const files = Array.from(event.target.files)
-  const dataUrls = await Promise.all(files.map((file) => readFileAsDataUrl(file)))
-  form.value.poster = dataUrls
-  posterPreviews.value = dataUrls
+  const files = Array.from(event.target.files).slice(0, MAX_POSTERS)
+
+  try {
+    const dataUrls = await Promise.all(files.map((file) => resizeImage(file, 1000, 0.75)))
+    form.value.poster = dataUrls
+    posterPreviews.value = dataUrls
+    errors.value.poster = ''
+  } catch (error) {
+    errors.value.poster = error.message
+  }
 }
 </script>
 
@@ -184,9 +216,12 @@ async function handlePosterUpload(event) {
             <p v-if="errors.category" class="form-error">{{ errors.category }}</p>
             <label class="form-label">Event Pictures</label>
             <input type="file" accept="image/*" @change="handleEventImage" />
+            <p v-if="errors.eventImage" class="form-error">{{ errors.eventImage }}</p>
             <img v-if="eventImagePreview" :src="eventImagePreview" alt="Event Preview" class="preview-image" />
             <label class="form-label">Event Posters</label>
             <input type="file" accept="image/*" multiple @change="handlePosterUpload" />
+            <p class="form-hint">Images are compressed automatically before submit. Maximum {{ MAX_POSTERS }} posters.</p>
+            <p v-if="errors.poster" class="form-error">{{ errors.poster }}</p>
             <div v-if="posterPreviews.length" class="poster-previews-grid">
               <img v-for="(poster, index) in posterPreviews" :key="index" :src="poster" alt="Poster Preview" class="preview-image" />
             </div>

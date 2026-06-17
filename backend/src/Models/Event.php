@@ -85,7 +85,7 @@ class Event
 
         try {
             $categoryId = $this->resolveCategoryId($data['category']);
-            $organizerId = $this->resolveOrganizerId($data['organizer']);
+            $organizerId = $this->resolveOrganizerId($data);
 
             $statement = $this->db->prepare(
                 'INSERT INTO events
@@ -322,6 +322,8 @@ class Event
             'title' => trim((string)($payload['title'] ?? '')),
             'description' => trim((string)($payload['description'] ?? '')),
             'category' => trim((string)($payload['category'] ?? '')),
+            'organizerId' => isset($payload['organizerId']) && is_numeric($payload['organizerId']) ? (int)$payload['organizerId'] : null,
+            'organizerEmail' => strtolower(trim((string)($payload['organizerEmail'] ?? ''))),
             'organizer' => trim((string)($payload['organizer'] ?? 'Computing Students Society')),
             'eventDate' => trim((string)($payload['eventDate'] ?? '')),
             'startTime' => trim((string)($payload['startTime'] ?? '')),
@@ -387,6 +389,17 @@ class Event
             }
         }
 
+        if (strlen($data['eventImage']) > 1500000) {
+            $errors['eventImage'] = 'Event picture is too large. Please upload a smaller image.';
+        }
+
+        foreach ($data['poster'] as $poster) {
+            if (is_string($poster) && strlen($poster) > 1200000) {
+                $errors['poster'] = 'One or more posters are too large. Please upload smaller images.';
+                break;
+            }
+        }
+
         if ($errors) {
             throw new \InvalidArgumentException(json_encode($errors));
         }
@@ -408,8 +421,29 @@ class Event
         return (int)$this->db->lastInsertId();
     }
 
-    private function resolveOrganizerId(string $organizerName): int
+    private function resolveOrganizerId(array $data): int
     {
+        if (!empty($data['organizerId'])) {
+            $statement = $this->db->prepare("SELECT user_id FROM users WHERE user_id = ? AND role = 'organizer'");
+            $statement->execute([$data['organizerId']]);
+            $organizerId = $statement->fetchColumn();
+
+            if ($organizerId) {
+                return (int)$organizerId;
+            }
+        }
+
+        if (!empty($data['organizerEmail'])) {
+            $statement = $this->db->prepare("SELECT user_id FROM users WHERE email = ? AND role = 'organizer'");
+            $statement->execute([$data['organizerEmail']]);
+            $organizerId = $statement->fetchColumn();
+
+            if ($organizerId) {
+                return (int)$organizerId;
+            }
+        }
+
+        $organizerName = $data['organizer'];
         $statement = $this->db->prepare("SELECT user_id FROM users WHERE name = ? AND role = 'organizer'");
         $statement->execute([$organizerName]);
         $organizerId = $statement->fetchColumn();
