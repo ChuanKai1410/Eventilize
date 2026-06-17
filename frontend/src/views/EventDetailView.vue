@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
 import StudentProtectedLayout from '../components/student/StudentProtectedLayout.vue'
@@ -115,6 +115,7 @@ const successMessage = ref('')
 const showRegistrationModal = ref(false)
 const registrationModalTitle = ref('')
 const registrationModalMessage = ref('')
+let detailLoadToken = 0
 
 const formattedDate = computed(() => {
   if (!event.value) return ''
@@ -129,16 +130,35 @@ const formattedDate = computed(() => {
   })
 })
 
-onMounted(async () => {
+async function loadEventDetail(eventId) {
+  const token = ++detailLoadToken
+  registrationStatus.value = false
+  closeRegistrationModal()
+
   await fetchEvents(true)
   await fetchRegisteredEvents(true)
+
+  if (token !== detailLoadToken) return
+
   if (event.value) {
     if (isStudent.value) {
-      registrationStatus.value = await fetchRegistrationStatus(event.value.id)
+      const currentStatus = await fetchRegistrationStatus(event.value.id)
+      if (token !== detailLoadToken) return
+      registrationStatus.value = currentStatus
     }
     await incrementViews(event.value.id)
   }
-})
+}
+
+watch(
+  () => route.params.id,
+  (eventId) => {
+    if (eventId) {
+      loadEventDetail(eventId)
+    }
+  },
+  { immediate: true }
+)
 
 function handleBookmark() {
   if (event.value) toggleBookmark(event.value.id)
