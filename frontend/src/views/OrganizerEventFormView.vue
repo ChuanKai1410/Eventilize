@@ -135,10 +135,14 @@ function resizeImage(file, maxWidth = 1200, quality = 0.78) {
       canvas.height = Math.round(img.height * scale)
 
       const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        URL.revokeObjectURL(objectUrl)
+        reject(new Error('Unable to process image.'))
+        return
+      }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
       URL.revokeObjectURL(objectUrl)
       resolve(canvas.toDataURL('image/jpeg', quality))
-    }
 
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl)
