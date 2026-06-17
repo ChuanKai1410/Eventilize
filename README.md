@@ -159,7 +159,15 @@ cp .env.example .env
 
 Configure database credentials inside `.env`.
 
-Start PHP server:
+Create/update the database and execute `database/seed.sql` before starting the backend:
+
+```bash
+php scripts/setup-database.php
+```
+
+This step creates the schema if needed, syncs sample data, and prints database/seed status in the terminal.
+
+Start PHP server after the seed step succeeds:
 
 ```bash
 php -S localhost:8000 -t public
@@ -173,25 +181,15 @@ http://localhost:8000
 
 ---
 
-### Database Setup
+### Demo Accounts
 
-1. Create MySQL database:
+The seed step creates these demo accounts:
 
-```sql
-CREATE DATABASE eventilize;
-```
-
-2. Import schema:
-
-```bash
-database/schema.sql
-```
-
-3. Import sample data:
-
-```bash
-database/seed.sql
-```
+| Role | Email | Password |
+|--------|--------|--------|
+| Student | student@utm.my | student123 |
+| Organizer | organizer@utm.my | organizer123 |
+| Admin | admin@utm.my | admin1234 |
 
 ---
 

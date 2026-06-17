@@ -12,6 +12,7 @@ const route = useRoute()
 const searchQuery = ref('')
 
 const isLandingPage = computed(() => route.path === '/')
+const brandRoute = computed(() => (isAuthenticated.value ? getDashboardRoute() : '/'))
 
 const roleLabel = computed(() => {
   if (!user.value) return ''
@@ -63,7 +64,7 @@ function handleSearch() {
 <template>
   <header class="navbar">
     <div class="navbar-inner">
-      <router-link to="/" class="navbar-brand">
+      <router-link :to="brandRoute" class="navbar-brand">
         <span class="brand-icon" aria-hidden="true">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <rect width="24" height="24" rx="6" fill="#8B1E3F"/>

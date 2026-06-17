@@ -5,9 +5,21 @@ require __DIR__ . '/../vendor/autoload.php';
 use Dotenv\Dotenv;
 
 $rootPath = dirname(__DIR__);
+$setupIsCli = PHP_SAPI === 'cli' && realpath($_SERVER['SCRIPT_FILENAME'] ?? '') === __FILE__;
 
 if (file_exists($rootPath . '/.env')) {
     Dotenv::createImmutable($rootPath)->safeLoad();
+}
+
+function finishSetup(int $code): int
+{
+    global $setupIsCli;
+
+    if ($setupIsCli) {
+        exit($code);
+    }
+
+    return $code;
 }
 
 function notifyStatus(string $label, bool $success, string $message = ''): void
@@ -60,7 +72,11 @@ function countExistingTables(PDO $connection, string $database): int
 
 function hasSeedData(PDO $connection): bool
 {
-    return (int)$connection->query('SELECT COUNT(*) FROM categories')->fetchColumn() > 0;
+    $studentExists = (int)$connection->query("SELECT COUNT(*) FROM users WHERE email = 'student@utm.my'")->fetchColumn() > 0;
+    $organizerExists = (int)$connection->query("SELECT COUNT(*) FROM users WHERE email = 'organizer@utm.my'")->fetchColumn() > 0;
+    $sampleEvents = (int)$connection->query("SELECT COUNT(*) FROM events WHERE title IN ('UTM Tech Talk 2026', 'Career Fair 2026', 'Cultural Night', 'Sports Tournament', 'Research Seminar', 'Business Workshop')")->fetchColumn();
+
+    return $studentExists && $organizerExists && $sampleEvents >= 6;
 }
 
 function columnExists(PDO $connection, string $database, string $table, string $column): bool
@@ -99,7 +115,6 @@ function applySchemaCompatibility(PDO $connection, string $database): void
 function ensureReferenceData(PDO $connection): void
 {
     ensureSuperAdmin($connection);
-    cleanupLegacyDemoStudentData($connection);
 
     $categories = ['Tech Talk', 'Workshop', 'Cultural', 'Sports', 'Career', 'Seminar', 'Residential'];
     $statement = $connection->prepare('INSERT IGNORE INTO categories (category_name) VALUES (?)');
@@ -135,28 +150,6 @@ function ensureSuperAdmin(PDO $connection): void
     notifyStatus('Super admin account', true, "email={$email} password={$password}");
 }
 
-function cleanupLegacyDemoStudentData(PDO $connection): void
-{
-    $emails = ['student@utm.my', 'student1@utm.my', 'student2@utm.my', 'admin@eventilize.com'];
-    $placeholders = implode(',', array_fill(0, count($emails), '?'));
-    $statement = $connection->prepare("SELECT user_id FROM users WHERE email IN ({$placeholders})");
-    $statement->execute($emails);
-    $userIds = array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN));
-
-    if (!$userIds) {
-        notifyStatus('Legacy demo student data cleanup', true, 'no legacy student data found');
-        return;
-    }
-
-    $idPlaceholders = implode(',', array_fill(0, count($userIds), '?'));
-    $connection->prepare("DELETE FROM event_registrations WHERE user_id IN ({$idPlaceholders})")->execute($userIds);
-    $connection->prepare("DELETE FROM bookmarks WHERE user_id IN ({$idPlaceholders})")->execute($userIds);
-    $connection->prepare("DELETE FROM notifications WHERE user_id IN ({$idPlaceholders})")->execute($userIds);
-    $connection->prepare("DELETE FROM notification_settings WHERE user_id IN ({$idPlaceholders})")->execute($userIds);
-
-    notifyStatus('Legacy demo student data cleanup', true, 'old registrations, bookmarks, and notifications removed');
-}
-
 $host = $_ENV['DB_HOST'] ?? 'localhost';
 $port = $_ENV['DB_PORT'] ?? '3306';
 $database = $_ENV['DB_NAME'] ?? 'eventilize';
@@ -174,7 +167,7 @@ try {
     notifyStatus('Database connection', true, "{$host}:{$port}");
 } catch (Throwable $exception) {
     notifyStatus('Database connection', false, $exception->getMessage());
-    exit(1);
+    return finishSetup(1);
 }
 
 try {
@@ -195,7 +188,7 @@ try {
     notifyStatus('Reference data', true, 'super admin and categories available');
 } catch (Throwable $exception) {
     notifyStatus('Schema creation', false, $exception->getMessage());
-    exit(1);
+    return finishSetup(1);
 }
 
 function tableExists(PDO $connection, string $database, string $table): bool
@@ -248,14 +241,11 @@ function applyRegistrationSchemaCompatibility(PDO $connection, string $database)
 
 try {
     $connection->exec("USE `{$database}`");
-
-    if (hasSeedData($connection)) {
-        notifyStatus('Seed data creation', true, 'seed data already exists');
-    } else {
-        runSqlFile($connection, $rootPath . '/database/seed.sql');
-        notifyStatus('Seed data creation', true, $database);
-    }
+    runSqlFile($connection, $rootPath . '/database/seed.sql');
+    notifyStatus('Seed data creation', true, hasSeedData($connection) ? 'sample data synced' : 'seed executed with incomplete sample data');
 } catch (Throwable $exception) {
     notifyStatus('Seed data creation', false, $exception->getMessage());
-    exit(1);
+    return finishSetup(1);
 }
+
+return finishSetup(0);
