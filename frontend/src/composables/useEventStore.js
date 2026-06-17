@@ -17,7 +17,11 @@ function upsertEvent(event) {
   if (index === -1) {
     events.value.push(event)
   } else {
-    events.value[index] = event
+    events.value[index] = {
+      ...events.value[index],
+      ...event,
+      isBookmarked: event.isBookmarked ?? events.value[index].isBookmarked,
+    }
   }
   return event
 }
@@ -100,7 +104,11 @@ export function useEventStore() {
     try {
       const response = await api.post(`/events/${eventId}/views`)
       if (response.data?.success) {
-        return upsertEvent(response.data.data)
+        const current = getEventById(eventId)
+        return upsertEvent({
+          ...response.data.data,
+          isBookmarked: current?.isBookmarked ?? response.data.data.isBookmarked,
+        })
       }
     } catch (error) {
       console.error('Failed to increment views:', error)

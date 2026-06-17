@@ -99,6 +99,7 @@ function applySchemaCompatibility(PDO $connection, string $database): void
 function ensureReferenceData(PDO $connection): void
 {
     ensureSuperAdmin($connection);
+    cleanupLegacyDemoStudentData($connection);
 
     $categories = ['Tech Talk', 'Workshop', 'Cultural', 'Sports', 'Career', 'Seminar', 'Residential'];
     $statement = $connection->prepare('INSERT IGNORE INTO categories (category_name) VALUES (?)');
@@ -132,6 +133,28 @@ function ensureSuperAdmin(PDO $connection): void
     $connection->prepare("INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, 'admin')")
         ->execute([$name, $email, $hash]);
     notifyStatus('Super admin account', true, "email={$email} password={$password}");
+}
+
+function cleanupLegacyDemoStudentData(PDO $connection): void
+{
+    $emails = ['student@utm.my', 'student1@utm.my', 'student2@utm.my', 'admin@eventilize.com'];
+    $placeholders = implode(',', array_fill(0, count($emails), '?'));
+    $statement = $connection->prepare("SELECT user_id FROM users WHERE email IN ({$placeholders})");
+    $statement->execute($emails);
+    $userIds = array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN));
+
+    if (!$userIds) {
+        notifyStatus('Legacy demo student data cleanup', true, 'no legacy student data found');
+        return;
+    }
+
+    $idPlaceholders = implode(',', array_fill(0, count($userIds), '?'));
+    $connection->prepare("DELETE FROM event_registrations WHERE user_id IN ({$idPlaceholders})")->execute($userIds);
+    $connection->prepare("DELETE FROM bookmarks WHERE user_id IN ({$idPlaceholders})")->execute($userIds);
+    $connection->prepare("DELETE FROM notifications WHERE user_id IN ({$idPlaceholders})")->execute($userIds);
+    $connection->prepare("DELETE FROM notification_settings WHERE user_id IN ({$idPlaceholders})")->execute($userIds);
+
+    notifyStatus('Legacy demo student data cleanup', true, 'old registrations, bookmarks, and notifications removed');
 }
 
 $host = $_ENV['DB_HOST'] ?? 'localhost';

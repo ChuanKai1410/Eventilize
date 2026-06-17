@@ -27,7 +27,7 @@ const {
 const { isAuthenticated, user } = useAuth()
 const {
   fetchRegisteredEvents,
-  isRegistered,
+  fetchRegistrationStatus,
   registerForEvent,
 } = useRegisteredEvents()
 
@@ -42,7 +42,8 @@ const isAdmin = computed(() => user.value?.role === 'admin')
 const isStudent = computed(() => user.value?.role === 'student')
 const isOrganizer = computed(() => user.value?.role === 'organizer')
 const isPendingEvent = computed(() => event.value?.status === 'Pending')
-const isEventRegistered = computed(() => event.value ? isRegistered(event.value.id) : false)
+const registrationStatus = ref(false)
+const isEventRegistered = computed(() => registrationStatus.value)
 const isOrganizerEvent = computed(() => {
   if (!event.value || !user.value) return false
   const organizerName = user.value.organizerName || user.value.name
@@ -112,6 +113,7 @@ const rejectReason = ref('')
 const rejectReasonError = ref('')
 const successMessage = ref('')
 const showRegistrationModal = ref(false)
+const registrationModalTitle = ref('')
 const registrationModalMessage = ref('')
 
 const formattedDate = computed(() => {
@@ -128,9 +130,14 @@ const formattedDate = computed(() => {
 })
 
 onMounted(async () => {
-  await fetchEvents()
+  await fetchEvents(true)
   await fetchRegisteredEvents(true)
-  if (event.value) incrementViews(event.value.id)
+  if (event.value) {
+    if (isStudent.value) {
+      registrationStatus.value = await fetchRegistrationStatus(event.value.id)
+    }
+    await incrementViews(event.value.id)
+  }
 })
 
 function handleBookmark() {
@@ -140,13 +147,32 @@ function handleBookmark() {
 async function handleRegistration() {
   if (!event.value || isEventRegistered.value) return
 
-  await registerForEvent(event.value.id)
-  registrationModalMessage.value = `You have registered for "${event.value.title}".`
-  showRegistrationModal.value = true
+  try {
+    const registeredEvent = await registerForEvent(event.value.id)
+
+    if (!registeredEvent) {
+      throw new Error('Registration failed.')
+    }
+
+    registrationModalTitle.value = 'Registration Successful'
+    registrationModalMessage.value = `You have registered for "${event.value.title}".`
+    registrationStatus.value = true
+    showRegistrationModal.value = true
+  } catch (error) {
+    registrationModalTitle.value = 'Registration Failed'
+    registrationModalMessage.value =
+      error.response?.data?.errors?.event ||
+      error.response?.data?.errors?.user ||
+      error.response?.data?.message ||
+      error.message ||
+      'Unable to register for this event.'
+    showRegistrationModal.value = true
+  }
 }
 
 function closeRegistrationModal() {
   showRegistrationModal.value = false
+  registrationModalTitle.value = ''
   registrationModalMessage.value = ''
 }
 
@@ -493,7 +519,7 @@ function clearSuccess() {
 
         <div v-if="showRegistrationModal" class="modal-overlay" @click.self="closeRegistrationModal">
           <div class="modal">
-            <h3>Registration Successful</h3>
+            <h3>{{ registrationModalTitle }}</h3>
 
             <p>{{ registrationModalMessage }}</p>
 

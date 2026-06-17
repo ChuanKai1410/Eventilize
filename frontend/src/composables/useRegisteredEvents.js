@@ -61,6 +61,20 @@ export function useRegisteredEvents() {
     return registeredIds.value.includes(Number(eventId))
   }
 
+  async function fetchRegistrationStatus(eventId) {
+    const userId = getCurrentUserId()
+    if (!userId || !eventId) return false
+
+    try {
+      const response = await api.get(`/users/${encodeURIComponent(userId)}/registrations/${eventId}`)
+      const status = response.data?.data?.isRegistered
+      return status === true || status === 1 || status === '1'
+    } catch (error) {
+      console.error('Failed to fetch registration status:', error)
+      return false
+    }
+  }
+
   async function registerForEvent(eventId) {
     const userId = getCurrentUserId()
     if (!userId) return null
@@ -95,6 +109,7 @@ export function useRegisteredEvents() {
     upcomingRegistered,
     pastRegistered,
     fetchRegisteredEvents,
+    fetchRegistrationStatus,
     isRegistered,
     registerForEvent,
     getEventsOnDate,
