@@ -1,21 +1,37 @@
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import ProtectedLayout from '../components/ProtectedLayout.vue'
 import AnalyticsCard from '../components/AnalyticsCard.vue'
 import StatusBadge from '../components/StatusBadge.vue'
+import api from '../services/api.js'
 import { useEventStore } from '../composables/useEventStore.js'
 
 const { events, fetchEvents } = useEventStore()
+const dashboardStats = ref({
+  totalUsers: 0,
+  totalEvents: 0,
+  pending: 0,
+  approved: 0,
+  rejected: 0,
+})
 
-onMounted(() => {
-  fetchEvents()
+onMounted(async () => {
+  await fetchEvents()
+  try {
+    const response = await api.get('/admin/dashboard')
+    if (response.data?.success) {
+      dashboardStats.value = response.data.data
+    }
+  } catch (error) {
+    console.error('Failed to fetch admin dashboard:', error)
+  }
 })
 
 const stats = computed(() => ({
-  totalEvents: events.value.length,
-  pending: events.value.filter((e) => e.status === 'Pending').length,
-  approved: events.value.filter((e) => e.status === 'Approved').length,
-  rejected: events.value.filter((e) => e.status === 'Rejected').length,
+  totalEvents: dashboardStats.value.totalEvents ?? events.value.length,
+  pending: dashboardStats.value.pending ?? events.value.filter((e) => e.status === 'Pending').length,
+  approved: dashboardStats.value.approved ?? events.value.filter((e) => e.status === 'Approved').length,
+  rejected: dashboardStats.value.rejected ?? events.value.filter((e) => e.status === 'Rejected').length,
 }))
 
 const pendingList = computed(() =>
@@ -24,8 +40,7 @@ const pendingList = computed(() =>
     .slice(0, 5)
 )
 
-// Mock user count for admin dashboard
-const totalUsers = 1247
+const totalUsers = computed(() => dashboardStats.value.totalUsers)
 </script>
 
 <template>

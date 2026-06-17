@@ -170,6 +170,7 @@ class Event
 
         try {
             $this->db->prepare('DELETE FROM bookmarks WHERE event_id = ?')->execute([$id]);
+            $this->db->prepare('DELETE FROM event_registrations WHERE event_id = ?')->execute([$id]);
             $this->db->prepare('DELETE FROM notifications WHERE event_id = ?')->execute([$id]);
             $this->db->prepare('DELETE FROM event_analytics WHERE event_id = ?')->execute([$id]);
             $this->db->prepare('DELETE FROM events WHERE event_id = ?')->execute([$id]);
@@ -420,9 +421,9 @@ class Event
 
         $statement = $this->db->prepare(
             "INSERT INTO users (name, email, password_hash, role)
-             VALUES (?, ?, 'placeholder_hash', 'organizer')"
+             VALUES (?, ?, ?, 'organizer')"
         );
-        $statement->execute([$organizerName, $email]);
+        $statement->execute([$organizerName, $email, password_hash(bin2hex(random_bytes(12)), PASSWORD_DEFAULT)]);
 
         return (int)$this->db->lastInsertId();
     }
@@ -430,8 +431,13 @@ class Event
     private function resolveBookmarkUserId(?string $identifier): int
     {
         if ($identifier) {
-            $statement = $this->db->prepare("SELECT user_id FROM users WHERE email = ? OR name = ?");
-            $statement->execute([$identifier, $identifier]);
+            if (is_numeric($identifier)) {
+                $statement = $this->db->prepare('SELECT user_id FROM users WHERE user_id = ?');
+                $statement->execute([(int)$identifier]);
+            } else {
+                $statement = $this->db->prepare("SELECT user_id FROM users WHERE email = ? OR name = ?");
+                $statement->execute([$identifier, $identifier]);
+            }
             $userId = $statement->fetchColumn();
 
             if ($userId) {

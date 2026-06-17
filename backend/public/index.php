@@ -1,6 +1,7 @@
 <?php
 
 use Eventilize\Helpers\ResponseHelper;
+use Eventilize\Middleware\CorsMiddleware;
 use Slim\Exception\HttpNotFoundException;
 use Slim\Factory\AppFactory;
 
@@ -10,20 +11,7 @@ $app = AppFactory::create();
 
 $app->addBodyParsingMiddleware();
 $app->addRoutingMiddleware();
-
-$app->add(function ($request, $handler) use ($app) {
-    if ($request->getMethod() === 'OPTIONS') {
-        $response = $app->getResponseFactory()->createResponse(204);
-    } else {
-        $response = $handler->handle($request);
-    }
-
-    return $response
-        ->withHeader('Access-Control-Allow-Origin', 'http://localhost:5173')
-        ->withHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-        ->withHeader('Access-Control-Allow-Credentials', 'true');
-});
+$app->add(new CorsMiddleware());
 
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);
 $errorMiddleware->setDefaultErrorHandler(

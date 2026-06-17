@@ -40,7 +40,9 @@ function countExistingTables(PDO $connection, string $database): int
         'categories',
         'events',
         'bookmarks',
+        'event_registrations',
         'notifications',
+        'notification_settings',
         'event_analytics',
     ];
 
@@ -108,15 +110,9 @@ function applySchemaCompatibility(PDO $connection, string $database): void
 
 function ensureDemoReferenceData(PDO $connection): void
 {
-    $statement = $connection->prepare("SELECT COUNT(*) FROM users WHERE email = ? OR name = ?");
-    $statement->execute(['organizer@utm.my', 'Computing Students Society']);
-
-    if ((int)$statement->fetchColumn() === 0) {
-        $connection->prepare(
-            "INSERT INTO users (name, email, password_hash, role)
-             VALUES ('Computing Students Society', 'organizer@utm.my', 'hash123', 'organizer')"
-        )->execute();
-    }
+    ensureDemoUser($connection, 'Ahmad Student', 'student@utm.my', 'student123', 'student');
+    ensureDemoUser($connection, 'Computing Students Society', 'organizer@utm.my', 'organizer123', 'organizer');
+    ensureDemoUser($connection, 'Platform Admin', 'admin@utm.my', 'admin1234', 'admin');
 
     $categories = ['Tech Talk', 'Workshop', 'Cultural', 'Sports', 'Career', 'Seminar', 'Residential'];
     $statement = $connection->prepare('INSERT IGNORE INTO categories (category_name) VALUES (?)');
@@ -124,6 +120,69 @@ function ensureDemoReferenceData(PDO $connection): void
     foreach ($categories as $category) {
         $statement->execute([$category]);
     }
+}
+
+function ensureDemoUser(PDO $connection, string $name, string $email, string $password, string $role): void
+{
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    $statement = $connection->prepare('SELECT user_id FROM users WHERE email = ?');
+    $statement->execute([$email]);
+    $userId = $statement->fetchColumn();
+
+    if ($userId) {
+        $connection->prepare('UPDATE users SET name = ?, password_hash = ?, role = ? WHERE user_id = ?')
+            ->execute([$name, $hash, $role, $userId]);
+        return;
+    }
+
+    $connection->prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)')
+        ->execute([$name, $email, $hash, $role]);
+}
+
+function ensureDemoRegistrations(PDO $connection): void
+{
+    $studentId = $connection->query("SELECT user_id FROM users WHERE email = 'student@utm.my' LIMIT 1")->fetchColumn();
+
+    if (!$studentId) {
+        return;
+    }
+
+    $eventIds = $connection
+        ->query("SELECT event_id FROM events WHERE status = 'approved' ORDER BY event_date ASC LIMIT 4")
+        ->fetchAll(PDO::FETCH_COLUMN);
+
+    $statement = $connection->prepare(
+        "INSERT INTO event_registrations (user_id, event_id, status, registered_at, cancelled_at)
+         VALUES (?, ?, 'registered', NOW(), NULL)
+         ON DUPLICATE KEY UPDATE status = 'registered', cancelled_at = NULL"
+    );
+
+    foreach ($eventIds as $eventId) {
+        $statement->execute([$studentId, $eventId]);
+    }
+}
+
+function ensureDemoNotifications(PDO $connection): void
+{
+    $studentId = $connection->query("SELECT user_id FROM users WHERE email = 'student@utm.my' LIMIT 1")->fetchColumn();
+
+    if (!$studentId) {
+        return;
+    }
+
+    $connection->prepare('INSERT IGNORE INTO notification_settings (user_id) VALUES (?)')->execute([$studentId]);
+
+    $countStatement = $connection->prepare('SELECT COUNT(*) FROM notifications WHERE user_id = ?');
+    $countStatement->execute([$studentId]);
+
+    if ((int)$countStatement->fetchColumn() > 0) {
+        return;
+    }
+
+    $eventId = $connection->query("SELECT event_id FROM events WHERE status = 'approved' ORDER BY event_date ASC LIMIT 1")->fetchColumn();
+    $statement = $connection->prepare('INSERT INTO notifications (user_id, event_id, message, is_read) VALUES (?, ?, ?, ?)');
+    $statement->execute([$studentId, $eventId ?: null, 'Welcome to Eventilize. Your registered events are now synced with the database.', 0]);
+    $statement->execute([$studentId, $eventId ?: null, 'Reminder: Check your upcoming registered events.', 0]);
 }
 
 $host = $_ENV['DB_HOST'] ?? 'localhost';
@@ -149,7 +208,7 @@ try {
 try {
     $connection->exec("CREATE DATABASE IF NOT EXISTS `{$database}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
 
-    if (countExistingTables($connection, $database) === 6) {
+    if (countExistingTables($connection, $database) >= 6) {
         notifyStatus('Schema creation', true, "{$database} tables already exist");
     } else {
         runSqlFile($connection, $rootPath . '/database/schema.sql');
@@ -158,11 +217,65 @@ try {
 
     applySchemaCompatibility($connection, $database);
     notifyStatus('Schema compatibility', true, 'events table supports CRUD fields');
+    applyRegistrationSchemaCompatibility($connection, $database);
+    notifyStatus('Registration schema', true, 'student registrations table available');
     ensureDemoReferenceData($connection);
     notifyStatus('Demo reference data', true, 'organizer and categories available');
+    ensureDemoRegistrations($connection);
+    notifyStatus('Demo registrations', true, 'student registered events available');
+    ensureDemoNotifications($connection);
+    notifyStatus('Demo notifications', true, 'student notifications available');
 } catch (Throwable $exception) {
     notifyStatus('Schema creation', false, $exception->getMessage());
     exit(1);
+}
+
+function tableExists(PDO $connection, string $database, string $table): bool
+{
+    $statement = $connection->prepare(
+        'SELECT COUNT(*)
+         FROM information_schema.tables
+         WHERE table_schema = ?
+         AND table_name = ?'
+    );
+    $statement->execute([$database, $table]);
+
+    return (int)$statement->fetchColumn() > 0;
+}
+
+function applyRegistrationSchemaCompatibility(PDO $connection, string $database): void
+{
+    $connection->exec("USE `{$database}`");
+
+    if (!tableExists($connection, $database, 'event_registrations')) {
+        $connection->exec(
+            "CREATE TABLE event_registrations (
+                registration_id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                event_id INT NOT NULL,
+                status ENUM('registered','cancelled') DEFAULT 'registered',
+                registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                cancelled_at DATETIME NULL,
+                FOREIGN KEY (user_id) REFERENCES users(user_id),
+                FOREIGN KEY (event_id) REFERENCES events(event_id),
+                UNIQUE KEY unique_registration (user_id, event_id)
+            )"
+        );
+    }
+
+    if (!tableExists($connection, $database, 'notification_settings')) {
+        $connection->exec(
+            "CREATE TABLE notification_settings (
+                setting_id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL UNIQUE,
+                new_event BOOLEAN DEFAULT TRUE,
+                upcoming_event BOOLEAN DEFAULT TRUE,
+                registration_deadline BOOLEAN DEFAULT FALSE,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
+            )"
+        );
+    }
 }
 
 try {

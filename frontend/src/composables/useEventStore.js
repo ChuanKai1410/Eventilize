@@ -1,10 +1,9 @@
 import { ref, computed } from 'vue'
 import api from '../services/api.js'
-import { eventCategories } from '../data/mockEvents.js'
 import { useAuth } from './useAuth.js'
 
 const events = ref([])
-const categories = ref([...eventCategories])
+const categories = ref([])
 
 let fetchPromise = null
 

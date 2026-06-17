@@ -1,35 +1,53 @@
 import { ref, computed } from 'vue'
+import api from '../services/api.js'
+import { useAuth } from './useAuth.js'
 import { useEventStore } from './useEventStore.js'
 
-const STORAGE_KEY = 'eventilize_registered'
+const registeredEventsState = ref([])
+let fetchPromise = null
 
-function loadRegisteredIds() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    if (stored) return JSON.parse(stored)
-  } catch {
-    /* ignore */
-  }
-  // Mock: student registered for these approved events
-  return [2, 4, 5, 7]
+function getCurrentUserId() {
+  const { user } = useAuth()
+  return user.value?.id || user.value?.email || null
 }
 
-const registeredIds = ref(loadRegisteredIds())
+async function fetchRegisteredEvents(force = false) {
+  const userId = getCurrentUserId()
+  if (!userId) {
+    registeredEventsState.value = []
+    return []
+  }
 
-function persistRegistered() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(registeredIds.value))
+  if (fetchPromise && !force) return fetchPromise
+
+  fetchPromise = (async () => {
+    try {
+      const response = await api.get(`/users/${encodeURIComponent(userId)}/registrations`)
+      if (response.data?.success && Array.isArray(response.data.data)) {
+        registeredEventsState.value = response.data.data
+      }
+      return registeredEventsState.value
+    } catch (error) {
+      console.error('Failed to fetch registered events:', error)
+      return registeredEventsState.value
+    } finally {
+      fetchPromise = null
+    }
+  })()
+
+  return fetchPromise
 }
 
 export function useRegisteredEvents() {
-  const { events, approvedEvents } = useEventStore()
+  const { approvedEvents } = useEventStore()
 
   const today = () => new Date().toISOString().slice(0, 10)
 
   const registeredEvents = computed(() =>
-    events.value
-      .filter((e) => registeredIds.value.includes(e.id) && e.status === 'Approved')
-      .sort((a, b) => a.eventDate.localeCompare(b.eventDate))
+    [...registeredEventsState.value].sort((a, b) => a.eventDate.localeCompare(b.eventDate))
   )
+
+  const registeredIds = computed(() => registeredEvents.value.map((e) => Number(e.id)))
 
   const upcomingRegistered = computed(() =>
     registeredEvents.value.filter((e) => e.eventDate >= today())
@@ -43,18 +61,28 @@ export function useRegisteredEvents() {
     return registeredIds.value.includes(Number(eventId))
   }
 
-  function registerForEvent(eventId) {
-    const id = Number(eventId)
-    if (!registeredIds.value.includes(id)) {
-      registeredIds.value.push(id)
-      persistRegistered()
+  async function registerForEvent(eventId) {
+    const userId = getCurrentUserId()
+    if (!userId) return null
+
+    const response = await api.post(`/events/${eventId}/registrations`, { userId })
+    if (response.data?.success) {
+      await fetchRegisteredEvents(true)
+      return response.data.data
     }
+    return null
   }
 
-  function unregisterFromEvent(eventId) {
-    const id = Number(eventId)
-    registeredIds.value = registeredIds.value.filter((rid) => rid !== id)
-    persistRegistered()
+  async function unregisterFromEvent(eventId) {
+    const userId = getCurrentUserId()
+    if (!userId) return null
+
+    const response = await api.delete(`/events/${eventId}/registrations`, { data: { userId } })
+    if (response.data?.success) {
+      await fetchRegisteredEvents(true)
+      return response.data.data
+    }
+    return null
   }
 
   function getEventsOnDate(dateStr) {
@@ -72,10 +100,13 @@ export function useRegisteredEvents() {
     ]
   }
 
+  fetchRegisteredEvents()
+
   return {
     registeredEvents,
     upcomingRegistered,
     pastRegistered,
+    fetchRegisteredEvents,
     isRegistered,
     registerForEvent,
     unregisterFromEvent,

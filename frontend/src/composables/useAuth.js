@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
+import api from '../services/api.js'
 
 const STORAGE_USER = 'eventilize_user'
-const STORAGE_USERS = 'eventilize_users'
 
 const user = ref(loadUser())
 
@@ -14,77 +14,46 @@ function loadUser() {
   }
 }
 
-function loadUsers() {
-  try {
-    const stored = localStorage.getItem(STORAGE_USERS)
-    if (stored) return JSON.parse(stored)
-  } catch {
-    /* ignore */
-  }
-  return [
-    {
-      email: 'admin@utm.my',
-      password: 'admin1234',
-      name: 'Platform Admin',
-      role: 'admin',
-    },
-    {
-      email: 'organizer@utm.my',
-      password: 'organizer123',
-      name: 'Event Organizer',
-      role: 'organizer',
-      organizerName: 'Computing Students Society',
-    },
-    {
-      email: 'student@utm.my',
-      password: 'student123',
-      name: 'Ahmad Student',
-      role: 'student',
-    },
-  ]
-}
-
-function saveUsers(users) {
-  localStorage.setItem(STORAGE_USERS, JSON.stringify(users))
+function saveSession(sessionUser) {
+  user.value = sessionUser
+  localStorage.setItem(STORAGE_USER, JSON.stringify(sessionUser))
 }
 
 export function useAuth() {
   const isAuthenticated = computed(() => !!user.value)
 
-  function login(email, password) {
-    const users = loadUsers()
-    const account = users.find(
-      (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    )
-    if (!account) {
-      return { success: false, message: 'Invalid email or password.' }
+  async function login(email, password) {
+    try {
+      const response = await api.post('/auth/login', { email, password })
+      if (response.data?.success) {
+        saveSession(response.data.data.user)
+        return { success: true, user: response.data.data.user }
+      }
+      return { success: false, message: response.data?.message || 'Login failed.' }
+    } catch (error) {
+      return {
+        success: false,
+        message: error.response?.data?.errors?.credentials || error.response?.data?.message || 'Login failed.',
+      }
     }
-    const session = {
-      email: account.email,
-      name: account.name,
-      role: account.role,
-      organizerName: account.organizerName || null,
-    }
-    user.value = session
-    localStorage.setItem(STORAGE_USER, JSON.stringify(session))
-    return { success: true, user: session }
   }
 
-  function register({ name, email, password, role }) {
-    const users = loadUsers()
-    if (users.some((u) => u.email.toLowerCase() === email.toLowerCase())) {
-      return { success: false, message: 'An account with this email already exists.' }
+  async function register({ name, email, password, role }) {
+    try {
+      const response = await api.post('/auth/register', { name, email, password, role })
+      if (response.data?.success) {
+        saveSession(response.data.data.user)
+        return { success: true, user: response.data.data.user }
+      }
+      return { success: false, message: response.data?.message || 'Registration failed.' }
+    } catch (error) {
+      const errors = error.response?.data?.errors
+      return {
+        success: false,
+        message: errors?.email || errors?.password || errors?.name || error.response?.data?.message || 'Registration failed.',
+        errors,
+      }
     }
-    const newUser = {
-      email,
-      password,
-      name,
-      role,
-      organizerName: role === 'organizer' ? name : undefined,
-    }
-    users.push(newUser)
-    saveUsers(users)
-    return login(email, password)
   }
 
   function logout() {

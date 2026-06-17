@@ -66,6 +66,23 @@ CREATE TABLE bookmarks (
 );
 
 -- =====================
+-- EVENT REGISTRATIONS TABLE
+-- =====================
+CREATE TABLE event_registrations (
+    registration_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    event_id INT NOT NULL,
+    status ENUM('registered','cancelled') DEFAULT 'registered',
+    registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    cancelled_at DATETIME NULL,
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (event_id) REFERENCES events(event_id),
+
+    UNIQUE KEY unique_registration (user_id, event_id)
+);
+
+-- =====================
 -- NOTIFICATIONS TABLE
 -- =====================
 CREATE TABLE notifications (
@@ -91,4 +108,18 @@ CREATE TABLE event_analytics (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
     FOREIGN KEY (event_id) REFERENCES events(event_id)
+);
+
+-- =====================
+-- NOTIFICATION SETTINGS TABLE
+-- =====================
+CREATE TABLE notification_settings (
+    setting_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL UNIQUE,
+    new_event BOOLEAN DEFAULT TRUE,
+    upcoming_event BOOLEAN DEFAULT TRUE,
+    registration_deadline BOOLEAN DEFAULT FALSE,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
 );

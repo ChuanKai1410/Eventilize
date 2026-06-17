@@ -10,6 +10,7 @@ import BookmarkIcon from '../components/student/BookmarkIcon.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { useEventStore } from '../composables/useEventStore.js'
 import { useAuth } from '../composables/useAuth.js'
+import { useRegisteredEvents } from '../composables/useRegisteredEvents.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,6 +25,12 @@ const {
 } = useEventStore()
 
 const { isAuthenticated, user } = useAuth()
+const {
+  fetchRegisteredEvents,
+  isRegistered,
+  registerForEvent,
+  unregisterFromEvent,
+} = useRegisteredEvents()
 
 const showSidebar = computed(() => {
   if (!isAuthenticated.value) return false
@@ -36,6 +43,7 @@ const isAdmin = computed(() => user.value?.role === 'admin')
 const isStudent = computed(() => user.value?.role === 'student')
 const isOrganizer = computed(() => user.value?.role === 'organizer')
 const isPendingEvent = computed(() => event.value?.status === 'Pending')
+const isEventRegistered = computed(() => event.value ? isRegistered(event.value.id) : false)
 const isOrganizerEvent = computed(() => {
   if (!event.value || !user.value) return false
   const organizerName = user.value.organizerName || user.value.name
@@ -116,11 +124,26 @@ const formattedDate = computed(() => {
 
 onMounted(async () => {
   await fetchEvents()
+  await fetchRegisteredEvents(true)
   if (event.value) incrementViews(event.value.id)
 })
 
 function handleBookmark() {
   if (event.value) toggleBookmark(event.value.id)
+}
+
+async function handleRegistration() {
+  if (!event.value) return
+
+  if (isEventRegistered.value) {
+    await unregisterFromEvent(event.value.id)
+    successMessage.value = `Registration for "${event.value.title}" has been cancelled.`
+  } else {
+    await registerForEvent(event.value.id)
+    successMessage.value = `You have registered for "${event.value.title}".`
+  }
+
+  clearSuccess()
 }
 
 function goBack() {
@@ -368,6 +391,15 @@ function clearSuccess() {
                   Edit Event
                 </button>
 
+                <button
+                  v-else-if="isStudent"
+                  type="button"
+                  class="btn btn-primary"
+                  @click="handleRegistration"
+                >
+                  {{ isEventRegistered ? 'Cancel Registration' : 'Register for Event' }}
+                </button>
+
                 <a
                   v-else-if="event.registrationLink"
                   :href="event.registrationLink"
@@ -375,7 +407,7 @@ function clearSuccess() {
                   rel="noopener noreferrer"
                   class="btn btn-primary"
                 >
-                  Register for Event
+                  Open Registration Link
                 </a>
 
                 <BookmarkIcon
