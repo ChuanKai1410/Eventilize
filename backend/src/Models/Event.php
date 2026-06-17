@@ -468,10 +468,10 @@ class Event
     {
         if ($identifier) {
             if (is_numeric($identifier)) {
-                $statement = $this->db->prepare('SELECT user_id FROM users WHERE user_id = ?');
+                $statement = $this->db->prepare("SELECT user_id FROM users WHERE user_id = ? AND role = 'student'");
                 $statement->execute([(int)$identifier]);
             } else {
-                $statement = $this->db->prepare("SELECT user_id FROM users WHERE email = ? OR name = ?");
+                $statement = $this->db->prepare("SELECT user_id FROM users WHERE (email = ? OR name = ?) AND role = 'student'");
                 $statement->execute([$identifier, $identifier]);
             }
             $userId = $statement->fetchColumn();
