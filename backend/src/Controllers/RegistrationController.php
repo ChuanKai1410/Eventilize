@@ -19,10 +19,12 @@ class RegistrationController extends BaseController
     public function index(Request $request, Response $response, array $args): Response
     {
         try {
+            $user = $this->currentUser($request);
+
             return $this->success(
                 $response,
                 'Registered events retrieved successfully',
-                $this->registrations->listForUser((string)$args['userId'])
+                $this->registrations->listForUser((string)($user['id'] ?? ''))
             );
         } catch (\InvalidArgumentException $exception) {
             return $this->validationError($response, $exception);
@@ -32,8 +34,10 @@ class RegistrationController extends BaseController
     public function status(Request $request, Response $response, array $args): Response
     {
         try {
+            $user = $this->currentUser($request);
+
             return $this->success($response, 'Registration status retrieved successfully', [
-                'isRegistered' => $this->registrations->isRegistered((string)$args['userId'], (int)$args['eventId']),
+                'isRegistered' => $this->registrations->isRegistered((string)($user['id'] ?? ''), (int)$args['eventId']),
             ]);
         } catch (\InvalidArgumentException $exception) {
             return $this->validationError($response, $exception);
@@ -43,12 +47,12 @@ class RegistrationController extends BaseController
     public function store(Request $request, Response $response, array $args): Response
     {
         try {
-            $body = $request->getParsedBody() ?? [];
+            $user = $this->currentUser($request);
 
             return $this->success(
                 $response,
                 'Event registered successfully',
-                $this->registrations->register((string)($body['userId'] ?? ''), (int)$args['eventId']),
+                $this->registrations->register((string)($user['id'] ?? ''), (int)$args['eventId']),
                 201
             );
         } catch (\InvalidArgumentException $exception) {
@@ -61,12 +65,12 @@ class RegistrationController extends BaseController
     public function destroy(Request $request, Response $response, array $args): Response
     {
         try {
-            $body = $request->getParsedBody() ?? [];
+            $user = $this->currentUser($request);
 
             return $this->success(
                 $response,
                 'Event registration cancelled successfully',
-                $this->registrations->unregister((string)($body['userId'] ?? ''), (int)$args['eventId'])
+                $this->registrations->unregister((string)($user['id'] ?? ''), (int)$args['eventId'])
             );
         } catch (\InvalidArgumentException $exception) {
             return $this->validationError($response, $exception);

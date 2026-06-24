@@ -11,8 +11,8 @@ class BookmarkController extends BaseController
     public function toggle(Request $request, Response $response, array $args): Response
     {
         try {
-            $body = $request->getParsedBody() ?? [];
-            $event = (new Event($this->db))->toggleBookmark((int)$args['id'], $body['userId'] ?? null);
+            $user = $this->currentUser($request);
+            $event = (new Event($this->db))->toggleBookmark((int)$args['id'], isset($user['id']) ? (string)$user['id'] : null);
 
             if (!$event) {
                 return $this->error($response, 'Event not found', null, 404);

@@ -2,11 +2,17 @@ import { ref, computed } from 'vue'
 import api from '../services/api.js'
 
 const STORAGE_USER = 'eventilize_user'
+const STORAGE_TOKEN = 'eventilize_token'
 
 const user = ref(loadUser())
 
 function loadUser() {
   try {
+    if (!localStorage.getItem(STORAGE_TOKEN)) {
+      localStorage.removeItem(STORAGE_USER)
+      return null
+    }
+
     const stored = localStorage.getItem(STORAGE_USER)
     return stored ? JSON.parse(stored) : null
   } catch {
@@ -14,9 +20,13 @@ function loadUser() {
   }
 }
 
-function saveSession(sessionUser) {
+function saveSession(sessionUser, token) {
   user.value = sessionUser
   localStorage.setItem(STORAGE_USER, JSON.stringify(sessionUser))
+
+  if (token) {
+    localStorage.setItem(STORAGE_TOKEN, token)
+  }
 }
 
 export function useAuth() {
@@ -26,7 +36,7 @@ export function useAuth() {
     try {
       const response = await api.post('/auth/login', { email, password })
       if (response.data?.success) {
-        saveSession(response.data.data.user)
+        saveSession(response.data.data.user, response.data.data.token)
         return { success: true, user: response.data.data.user }
       }
       return { success: false, message: response.data?.message || 'Login failed.' }
@@ -42,7 +52,7 @@ export function useAuth() {
     try {
       const response = await api.post('/auth/register', { name, email, password, role })
       if (response.data?.success) {
-        saveSession(response.data.data.user)
+        saveSession(response.data.data.user, response.data.data.token)
         return { success: true, user: response.data.data.user }
       }
       return { success: false, message: response.data?.message || 'Registration failed.' }
@@ -59,7 +69,7 @@ export function useAuth() {
   function logout() {
     user.value = null
     localStorage.removeItem(STORAGE_USER)
-    localStorage.removeItem('eventilize_token')
+    localStorage.removeItem(STORAGE_TOKEN)
   }
 
   function getDashboardRoute() {

@@ -143,6 +143,7 @@ function resizeImage(file, maxWidth = 1200, quality = 0.78) {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
       URL.revokeObjectURL(objectUrl)
       resolve(canvas.toDataURL('image/jpeg', quality))
+    }
 
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl)
