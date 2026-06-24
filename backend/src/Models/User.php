@@ -108,7 +108,7 @@ class User
             $errors['email'] = 'Please enter a valid email address.';
         }
 
-        if (!in_array($data['role'], ['student', 'organizer', 'admin'], true)) {
+        if (!in_array($data['role'], ['student', 'organizer'], true)) {
             $errors['role'] = 'Invalid role.';
         }
 

@@ -9,7 +9,7 @@ let fetchPromise = null
 
 function getCurrentUserId() {
   const { user } = useAuth()
-  return user.value?.email || user.value?.name || null
+  return user.value?.id || null
 }
 
 function upsertEvent(event) {

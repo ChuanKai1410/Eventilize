@@ -30,17 +30,28 @@ class Notification
         return array_map(fn ($row) => $this->transform($row), $statement->fetchAll());
     }
 
-    public function markAsRead(int $notificationId): ?array
+    public function markAsRead(int $notificationId, ?int $userId = null): ?array
     {
-        $this->db->prepare('UPDATE notifications SET is_read = TRUE WHERE notification_id = ?')->execute([$notificationId]);
+        if ($userId !== null) {
+            $this->db->prepare('UPDATE notifications SET is_read = TRUE WHERE notification_id = ? AND user_id = ?')
+                ->execute([$notificationId, $userId]);
+        } else {
+            $this->db->prepare('UPDATE notifications SET is_read = TRUE WHERE notification_id = ?')->execute([$notificationId]);
+        }
 
-        $statement = $this->db->prepare(
-            'SELECT n.*, e.title AS event_title
-             FROM notifications n
-             LEFT JOIN events e ON n.event_id = e.event_id
-             WHERE n.notification_id = ?'
-        );
-        $statement->execute([$notificationId]);
+        $sql = 'SELECT n.*, e.title AS event_title
+                FROM notifications n
+                LEFT JOIN events e ON n.event_id = e.event_id
+                WHERE n.notification_id = ?';
+        $params = [$notificationId];
+
+        if ($userId !== null) {
+            $sql .= ' AND n.user_id = ?';
+            $params[] = $userId;
+        }
+
+        $statement = $this->db->prepare($sql);
+        $statement->execute($params);
         $row = $statement->fetch();
 
         return $row ? $this->transform($row) : null;

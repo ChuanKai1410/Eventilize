@@ -36,10 +36,19 @@ class EventController extends BaseController
     public function store(Request $request, Response $response): Response
     {
         try {
+            $body = $request->getParsedBody() ?? [];
+            $user = $this->currentUser($request);
+
+            if (($user['role'] ?? '') === 'organizer') {
+                $body['organizerId'] = $user['id'];
+                $body['organizerEmail'] = $user['email'] ?? '';
+                $body['organizer'] = $user['organizerName'] ?? $user['name'] ?? '';
+            }
+
             return $this->success(
                 $response,
                 'Event created successfully',
-                $this->events->create($request->getParsedBody() ?? []),
+                $this->events->create($body),
                 201
             );
         } catch (\InvalidArgumentException $exception) {
@@ -52,7 +61,25 @@ class EventController extends BaseController
     public function update(Request $request, Response $response, array $args): Response
     {
         try {
-            $event = $this->events->update((int)$args['id'], $request->getParsedBody() ?? []);
+            $existing = $this->events->find((int)$args['id']);
+
+            if (!$existing) {
+                return $this->error($response, 'Event not found', null, 404);
+            }
+
+            $user = $this->currentUser($request);
+            if (($user['role'] ?? '') === 'organizer' && (int)$existing['organizerId'] !== (int)$user['id']) {
+                return $this->error($response, 'Forbidden', ['auth' => 'You can only update your own events.'], 403);
+            }
+
+            $body = $request->getParsedBody() ?? [];
+            if (($user['role'] ?? '') === 'organizer') {
+                $body['organizerId'] = $user['id'];
+                $body['organizerEmail'] = $user['email'] ?? '';
+                $body['organizer'] = $user['organizerName'] ?? $user['name'] ?? '';
+            }
+
+            $event = $this->events->update((int)$args['id'], $body);
 
             if (!$event) {
                 return $this->error($response, 'Event not found', null, 404);
@@ -69,6 +96,17 @@ class EventController extends BaseController
     public function destroy(Request $request, Response $response, array $args): Response
     {
         try {
+            $existing = $this->events->find((int)$args['id']);
+
+            if (!$existing) {
+                return $this->error($response, 'Event not found', null, 404);
+            }
+
+            $user = $this->currentUser($request);
+            if (($user['role'] ?? '') === 'organizer' && (int)$existing['organizerId'] !== (int)$user['id']) {
+                return $this->error($response, 'Forbidden', ['auth' => 'You can only delete your own events.'], 403);
+            }
+
             if (!$this->events->delete((int)$args['id'])) {
                 return $this->error($response, 'Event not found', null, 404);
             }

@@ -6,6 +6,7 @@ use Eventilize\Config\Database;
 use Eventilize\Helpers\ResponseHelper;
 use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
 
 abstract class BaseController
 {
@@ -32,5 +33,12 @@ abstract class BaseController
         $errors = is_array($decoded) ? $decoded : ['request' => $exception->getMessage()];
 
         return $this->error($response, 'Validation failed', $errors, 400);
+    }
+
+    protected function currentUser(Request $request): ?array
+    {
+        $user = $request->getAttribute('user');
+
+        return is_array($user) ? $user : null;
     }
 }

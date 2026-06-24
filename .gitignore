@@ -146,6 +146,7 @@ vite.config.ts.timestamp-*
 # Backend (PHP Slim)
 # =========================
 vendor/
+backend/storage/
 
 # =========================
 # OS / Editor

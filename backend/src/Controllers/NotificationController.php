@@ -19,10 +19,12 @@ class NotificationController extends BaseController
     public function index(Request $request, Response $response, array $args): Response
     {
         try {
+            $user = $this->currentUser($request);
+
             return $this->success(
                 $response,
                 'Notifications retrieved successfully',
-                $this->notifications->listForUser((string)$args['userId'])
+                $this->notifications->listForUser((string)($user['id'] ?? ''))
             );
         } catch (\InvalidArgumentException $exception) {
             return $this->validationError($response, $exception);
@@ -31,7 +33,8 @@ class NotificationController extends BaseController
 
     public function markRead(Request $request, Response $response, array $args): Response
     {
-        $notification = $this->notifications->markAsRead((int)$args['id']);
+        $user = $this->currentUser($request);
+        $notification = $this->notifications->markAsRead((int)$args['id'], isset($user['id']) ? (int)$user['id'] : null);
 
         if (!$notification) {
             return $this->error($response, 'Notification not found', null, 404);
@@ -43,8 +46,10 @@ class NotificationController extends BaseController
     public function markAllRead(Request $request, Response $response, array $args): Response
     {
         try {
+            $user = $this->currentUser($request);
+
             return $this->success($response, 'All notifications marked as read', [
-                'updated' => $this->notifications->markAllAsRead((string)$args['userId']),
+                'updated' => $this->notifications->markAllAsRead((string)($user['id'] ?? '')),
             ]);
         } catch (\InvalidArgumentException $exception) {
             return $this->validationError($response, $exception);
@@ -54,10 +59,12 @@ class NotificationController extends BaseController
     public function settings(Request $request, Response $response, array $args): Response
     {
         try {
+            $user = $this->currentUser($request);
+
             return $this->success(
                 $response,
                 'Notification settings retrieved successfully',
-                $this->notifications->settings((string)$args['userId'])
+                $this->notifications->settings((string)($user['id'] ?? ''))
             );
         } catch (\InvalidArgumentException $exception) {
             return $this->validationError($response, $exception);
@@ -67,10 +74,12 @@ class NotificationController extends BaseController
     public function updateSettings(Request $request, Response $response, array $args): Response
     {
         try {
+            $user = $this->currentUser($request);
+
             return $this->success(
                 $response,
                 'Notification settings updated successfully',
-                $this->notifications->updateSettings((string)$args['userId'], $request->getParsedBody() ?? [])
+                $this->notifications->updateSettings((string)($user['id'] ?? ''), $request->getParsedBody() ?? [])
             );
         } catch (\InvalidArgumentException $exception) {
             return $this->validationError($response, $exception);
