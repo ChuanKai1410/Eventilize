@@ -73,7 +73,7 @@ class AuthController extends BaseController
 
         return JWT::encode([
             'iat' => $now,
-            'exp' => $now + (60 * 60 * 8),
+            'exp' => $now + (60 * 60),
             'user' => [
                 'id' => $user['id'],
                 'name' => $user['name'],
